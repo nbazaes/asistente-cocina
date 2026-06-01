@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendMessage, getSystemPrompt } from '../src/services/AIChatbotService';
 import { useSettingsStore } from '../src/stores/useSettingsStore';
+import { getProvider } from '../src/services/AIProviderConfig';
 import { colors, spacing, fontSize, borderRadius } from '../src/theme';
 
 interface Message {
@@ -25,9 +26,17 @@ interface Message {
 export default function ChatbotScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { openAIKey } = useSettingsStore();
+  const { apiKey, providerId, modelId } = useSettingsStore();
+  const provider = getProvider(providerId);
+  const modelName = provider.models.find(m => m.id === modelId)?.name ?? modelId;
+
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: '¡Hola! Soy tu chef IA. Pregúntame cualquier cosa sobre cocina: recetas, sustituciones, técnicas, o dime qué ingredientes tienes y te sugiero qué preparar.' },
+    {
+      id: '1',
+      role: 'assistant',
+      content:
+        '¡Hola! Soy tu chef IA. Pregúntame cualquier cosa sobre cocina: recetas, sustituciones, técnicas, o dime qué ingredientes tienes y te sugiero qué preparar.',
+    },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,18 +46,27 @@ export default function ChatbotScreen() {
     const text = input.trim();
     if (!text || loading) return;
 
-    if (!openAIKey) {
+    if (!apiKey) {
       const errMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: '⚠️ No has configurado una API key de OpenAI. Ve a Ajustes para configurarla.',
+        content:
+          '⚠️ No has configurado una API key. Ve a Ajustes para configurarla.',
       };
-      setMessages(prev => [...prev, { id: Date.now().toString() + 'u', role: 'user', content: text }, errMsg]);
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString() + 'u', role: 'user', content: text },
+        errMsg,
+      ]);
       setInput('');
       return;
     }
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+    };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
@@ -56,10 +74,17 @@ export default function ChatbotScreen() {
     try {
       const history = messages.filter(m => m.role !== 'system');
       const response = await sendMessage([
-        ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        ...history.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
         { role: 'user' as const, content: text },
       ]);
-      const aiMsg: Message = { id: Date.now().toString() + 'a', role: 'assistant', content: response };
+      const aiMsg: Message = {
+        id: Date.now().toString() + 'a',
+        role: 'assistant',
+        content: response,
+      };
       setMessages(prev => [...prev, aiMsg]);
     } catch (e) {
       const errMsg: Message = {
@@ -71,14 +96,23 @@ export default function ChatbotScreen() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, openAIKey]);
+  }, [input, loading, messages, apiKey]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
     return (
       <View style={[styles.bubbleRow, isUser && styles.bubbleRowUser]}>
-        <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
-          <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>{item.content}</Text>
+        <View
+          style={[
+            styles.bubble,
+            isUser ? styles.bubbleUser : styles.bubbleAI,
+          ]}
+        >
+          <Text
+            style={[styles.bubbleText, isUser && styles.bubbleTextUser]}
+          >
+            {item.content}
+          </Text>
         </View>
       </View>
     );
@@ -98,10 +132,16 @@ export default function ChatbotScreen() {
         <View style={{ width: 70 }} />
       </View>
 
-      {!openAIKey && (
+      {!apiKey ? (
         <View style={styles.warning}>
           <Text style={styles.warningText}>
             ⚠️ API key no configurada. Ve a Ajustes para habilitar el chat.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.info}>
+          <Text style={styles.infoText}>
+            {provider.name} · {modelName}
           </Text>
         </View>
       )}
@@ -112,7 +152,9 @@ export default function ChatbotScreen() {
         renderItem={renderMessage}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.messagesList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          flatListRef.current?.scrollToEnd({ animated: true })
+        }
         showsVerticalScrollIndicator={false}
       />
 
@@ -136,7 +178,10 @@ export default function ChatbotScreen() {
           returnKeyType="send"
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
+          style={[
+            styles.sendBtn,
+            (!input.trim() || loading) && styles.sendBtnDisabled,
+          ]}
           onPress={handleSend}
           disabled={!input.trim() || loading}
           activeOpacity={0.7}
@@ -186,6 +231,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: '#856404',
     textAlign: 'center',
+  },
+  info: {
+    padding: spacing.xs + 2,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: '#E8F5E9',
+  },
+  infoText: {
+    fontSize: fontSize.xs,
+    color: '#2E7D32',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   messagesList: {
     padding: spacing.md,
