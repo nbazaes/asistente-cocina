@@ -42,20 +42,15 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           json=$(pnpm dlx eas-cli build --platform android --profile production --non-interactive --json --wait)
-          build_id=$(echo "$json" | jq -r '.[0].id // .id')
-          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
-          echo "Build ID: $build_id"
+          build_url=$(echo "$json" | jq -r '.[0].artifacts.buildUrl // .artifacts.buildUrl')
+          echo "build_url=$build_url" >> "$GITHUB_OUTPUT"
+          echo "Build URL: $build_url"
 
       - name: Download APK
         id: download
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          project_id=$(jq -r '.expo.extra.eas.projectId' app.json)
           filename="${{ steps.version.outputs.slug }}-${{ steps.version.outputs.version }}.apk"
-          curl -sSfL -o "$filename" \
-            -H "Authorization: Bearer $EXPO_TOKEN" \
-            "https://api.expo.dev/v2/projects/$project_id/builds/${{ steps.build.outputs.build_id }}/artifacts"
+          curl -sSfL -o "$filename" "${{ steps.build.outputs.build_url }}"
           echo "filename=$filename" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release
