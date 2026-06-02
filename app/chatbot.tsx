@@ -26,6 +26,67 @@ interface Message {
   toolResults?: AIToolResult[];
 }
 
+function MarkdownText({ children, style }: { children: string; style: object }) {
+  const segments = parseMarkdown(children);
+  return (
+    <Text style={style}>
+      {segments.map((seg, i) => (
+        <Text
+          key={i}
+          style={[
+            seg.bold && { fontWeight: '700' as const },
+            seg.italic && { fontStyle: 'italic' as const },
+          ]}
+        >
+          {seg.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
+function parseMarkdown(text: string): { text: string; bold: boolean; italic: boolean }[] {
+  const segments: { text: string; bold: boolean; italic: boolean }[] = [];
+  let i = 0;
+
+  while (i < text.length) {
+    // **bold**
+    if (text[i] === '*' && text[i + 1] === '*') {
+      i += 2;
+      const end = text.indexOf('**', i);
+      if (end !== -1) {
+        segments.push({ text: text.slice(i, end), bold: true, italic: false });
+        i = end + 2;
+        continue;
+      }
+      segments.push({ text: '**', bold: false, italic: false });
+      continue;
+    }
+    // *italic*
+    if (text[i] === '*' && text[i + 1] !== '*') {
+      i += 1;
+      const end = text.indexOf('*', i);
+      if (end !== -1) {
+        segments.push({ text: text.slice(i, end), bold: false, italic: true });
+        i = end + 1;
+        continue;
+      }
+      segments.push({ text: '*', bold: false, italic: false });
+      continue;
+    }
+    // Plain text until next *
+    const nextStar = text.indexOf('*', i);
+    if (nextStar === -1) {
+      segments.push({ text: text.slice(i), bold: false, italic: false });
+      break;
+    }
+    segments.push({ text: text.slice(i, nextStar), bold: false, italic: false });
+    i = nextStar;
+  }
+
+  return segments;
+}
+
 export default function ChatbotScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -174,15 +235,15 @@ export default function ChatbotScreen() {
         {isUser ? (
           <View style={[styles.bubbleRow, styles.bubbleRowUser]}>
             <View style={[styles.bubble, styles.bubbleUser]}>
-              <Text style={[styles.bubbleText, styles.bubbleTextUser]}>
+              <MarkdownText style={[styles.bubbleText, styles.bubbleTextUser]}>
                 {item.content}
-              </Text>
+              </MarkdownText>
             </View>
           </View>
         ) : (
           <View style={styles.bubbleRow}>
             <View style={[styles.bubble, styles.bubbleAI]}>
-              <Text style={styles.bubbleText}>{item.content}</Text>
+              <MarkdownText style={styles.bubbleText}>{item.content}</MarkdownText>
             </View>
           </View>
         )}
