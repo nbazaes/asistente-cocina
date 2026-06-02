@@ -1,7 +1,9 @@
-name: Build Android APK
+name: Build and Release APK
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -9,6 +11,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          jq --arg v "$VERSION" '.expo.version = $v' app.json > app.tmp.json
+          mv app.tmp.json app.json
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -27,8 +37,9 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
         with:
-          name: android-apk
-          path: "*.apk"
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: "*.apk"
