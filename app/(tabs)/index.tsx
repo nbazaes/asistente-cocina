@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepositories } from '../../src/data/repositories/RepositoryProvider';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { RecipeCard } from '../../src/components/recipe/RecipeCard';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 import type { Recipe } from '../../src/data/models';
 
 export default function DashboardScreen() {
@@ -50,8 +50,15 @@ export default function DashboardScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.greeting}>¡Buen provecho!</Text>
-        <Text style={styles.subtitle}>¿Qué cocinamos hoy?</Text>
+        <Text style={styles.flourish}>✦</Text>
+        <Text style={styles.greeting}>Bon appétit</Text>
+        <Text style={styles.subtitle}>¿Qué horneamos hoy?</Text>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerDot}>•</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
         {/* Quick actions */}
         <View style={styles.actionsRow}>
@@ -60,8 +67,10 @@ export default function DashboardScreen() {
             onPress={() => router.push('/recipe/add')}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionIcon}>➕</Text>
-            <Text style={styles.actionLabel}>Añadir{'\n'}Receta</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.actionIcon}>+</Text>
+            </View>
+            <Text style={styles.actionLabel}>Nueva{'\n'}Receta</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -69,25 +78,31 @@ export default function DashboardScreen() {
             onPress={() => router.push('/recipes' as any)}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionIcon}>👨‍🍳</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.actionIcon}>👨‍🍳</Text>
+            </View>
             <Text style={styles.actionLabel}>¡A{'\n'}Cocinar!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.primaryDark }]}
+            style={[styles.actionCard, { backgroundColor: colors.accentDark }]}
             onPress={() => router.push('/ingredients' as any)}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionIcon}>🔎</Text>
-            <Text style={styles.actionLabel}>Buscar por{'\n'}Ingredientes</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.actionIcon}>🌿</Text>
+            </View>
+            <Text style={styles.actionLabel}>Por{'\n'}Ingredientes</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#7C3AED' }]}
+            style={[styles.actionCard, { backgroundColor: colors.lavender }]}
             onPress={() => router.push('/chatbot')}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionIcon}>🤖</Text>
+            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.actionIcon}>🤖</Text>
+            </View>
             <Text style={styles.actionLabel}>Chef{'\n'}IA</Text>
           </TouchableOpacity>
         </View>
@@ -95,7 +110,10 @@ export default function DashboardScreen() {
         {/* Suggestions */}
         {suggestions.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sugerencias para ti</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionBullet}>◆</Text>
+              <Text style={styles.sectionTitle}>Sugerencias del día</Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
               {suggestions.map(recipe => (
                 <RecipeCard
@@ -112,7 +130,10 @@ export default function DashboardScreen() {
         {/* Type sections */}
         {dishes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Platos principales</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionBullet}>◆</Text>
+              <Text style={styles.sectionTitle}>Platos principales</Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
               {dishes.slice(0, 5).map(recipe => (
                 <RecipeCard
@@ -128,7 +149,10 @@ export default function DashboardScreen() {
 
         {(desserts.length > 0 || bakery.length > 0) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Postres y repostería</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionBullet}>◆</Text>
+              <Text style={styles.sectionTitle}>Postres & repostería</Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
               {[...desserts, ...bakery].slice(0, 5).map(recipe => (
                 <RecipeCard
@@ -144,13 +168,15 @@ export default function DashboardScreen() {
 
         {recipes.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No tienes recetas todavía</Text>
+            <Text style={styles.emptyIcon}>🧁</Text>
+            <Text style={styles.emptyTitle}>Aún no tienes recetas</Text>
+            <Text style={styles.emptyText}>Crea tu primera receta y empieza a cocinar</Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => router.push('/recipe/add')}
               activeOpacity={0.8}
             >
-              <Text style={styles.addButtonText}>Añadir mi primera receta</Text>
+              <Text style={styles.addButtonText}>Crear mi primera receta</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -168,53 +194,99 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
+  },
+  flourish: {
+    textAlign: 'center',
+    fontSize: 20,
+    color: colors.primaryLight,
+    marginBottom: spacing.sm,
   },
   greeting: {
     fontSize: fontSize.hero,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     color: colors.text,
-    marginTop: spacing.sm,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
     marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  dividerLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: colors.borderSoft,
+  },
+  dividerDot: {
+    color: colors.primaryLight,
+    fontSize: 8,
   },
   actionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   actionCard: {
     flex: 1,
     borderRadius: borderRadius.lg,
-    padding: spacing.sm + 2,
+    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.xs + 2,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 88,
-    ...shadows.sm,
+    minHeight: 96,
+    ...shadows.md,
+  },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   actionIcon: {
-    fontSize: 26,
-    marginBottom: 4,
+    fontSize: 18,
+    color: colors.white,
   },
   actionLabel: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.xs + 1,
     fontWeight: '700',
+    fontFamily: fonts.body,
     color: colors.white,
     textAlign: 'center',
     lineHeight: 16,
   },
   section: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  sectionBullet: {
+    fontSize: 12,
+    color: colors.primary,
   },
   sectionTitle: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
   },
   horizontalScroll: {
     gap: spacing.sm,
@@ -222,22 +294,36 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.xxl * 2,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: fontSize.xl,
+    fontFamily: fonts.heading,
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
   },
   emptyText: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   addButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm + 6,
     borderRadius: borderRadius.full,
+    ...shadows.sm,
   },
   addButtonText: {
     color: colors.white,
     fontWeight: '700',
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
   },
 });

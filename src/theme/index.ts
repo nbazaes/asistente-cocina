@@ -1,22 +1,56 @@
+import { Platform } from 'react-native';
+
 export const colors = {
-  primary: '#FF6B35',
-  primaryLight: '#FF8C5E',
-  primaryDark: '#E55A2B',
-  secondary: '#2EC4B6',
-  secondaryLight: '#5DD9CB',
-  background: '#FFFBF7',
-  surface: '#FFFFFF',
-  surfaceAlt: '#FFF0E8',
-  text: '#2D2D2D',
-  textSecondary: '#6B6B6B',
-  textLight: '#9B9B9B',
-  border: '#F0E0D0',
-  error: '#E53935',
-  success: '#43A047',
-  warning: '#FFA726',
+  primary: '#D4A5A5',
+  primaryLight: '#E4C5C5',
+  primaryDark: '#B88888',
+  secondary: '#B5C9C7',
+  secondaryLight: '#D0E0DE',
+  accent: '#E8D5A3',
+  accentDark: '#D4B896',
+  lavender: '#CFC3E0',
+  lavenderLight: '#E4DCF0',
+  background: '#FEF9F4',
+  surface: '#FFFDF9',
+  surfaceAlt: '#FBF0E8',
+  surfaceRose: '#FAE8EC',
+  surfaceMint: '#EDF5F1',
+  surfaceLavender: '#F3EEF9',
+  surfaceButter: '#FBF5E4',
+  text: '#3D2C2C',
+  textSecondary: '#7A6A6A',
+  textLight: '#B0A0A0',
+  border: '#EAD9C8',
+  borderSoft: '#F0E5D8',
+  error: '#D48484',
+  success: '#8CB89C',
+  warning: '#E0C88E',
   white: '#FFFFFF',
   black: '#000000',
-  overlay: 'rgba(0,0,0,0.5)',
+  overlay: 'rgba(0,0,0,0.3)',
+};
+
+export const fonts = {
+  display: Platform.select({
+    ios: 'Baskerville',
+    android: 'notoserif',
+    default: 'serif',
+  }),
+  heading: Platform.select({
+    ios: 'Baskerville',
+    android: 'notoserif',
+    default: 'serif',
+  }),
+  body: Platform.select({
+    ios: 'Georgia',
+    android: 'serif',
+    default: 'serif',
+  }),
+  accent: Platform.select({
+    ios: 'Didot',
+    android: 'serif',
+    default: 'serif',
+  }),
 };
 
 export const spacing = {
@@ -29,10 +63,10 @@ export const spacing = {
 };
 
 export const borderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 28,
   full: 9999,
 };
 
@@ -43,29 +77,29 @@ export const fontSize = {
   lg: 18,
   xl: 22,
   xxl: 28,
-  hero: 34,
+  hero: 36,
 };
 
 export const shadows = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#C4A882',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.10,
+    shadowRadius: 3,
+    elevation: 2,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: '#C4A882',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: '#C4A882',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 10,
+    elevation: 6,
   },
 };

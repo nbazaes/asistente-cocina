@@ -5,7 +5,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { RepositoryProvider } from '../src/data/repositories/RepositoryProvider';
 import { runMigrations } from '../src/data/database/migrations';
 import { seedIfEmpty } from '../src/data/database/seed';
-import { colors } from '../src/theme';
+import { colors, fonts } from '../src/theme';
 
 function AppContent() {
   const [ready, setReady] = useState(false);
@@ -26,8 +26,8 @@ function AppContent() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <Text style={{ color: colors.error, fontSize: 16, textAlign: 'center' }}>{error}</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.error, fontSize: 16, textAlign: 'center', fontFamily: fonts.body }}>{error}</Text>
       </View>
     );
   }
@@ -36,7 +36,7 @@ function AppContent() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Cargando...</Text>
+        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16, fontFamily: fonts.body }}>Preparando todo...</Text>
       </View>
     );
   }

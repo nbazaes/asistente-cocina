@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import type { Recipe } from '../../data/models';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../theme';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -10,9 +10,9 @@ interface RecipeCardProps {
 }
 
 const DIFFICULTY_EMOJI: Record<string, string> = {
-  easy: '🟢',
-  medium: '🟡',
-  hard: '🔴',
+  easy: '●',
+  medium: '●●',
+  hard: '●●●',
 };
 
 const TYPE_EMOJI: Record<string, string> = {
@@ -22,8 +22,16 @@ const TYPE_EMOJI: Record<string, string> = {
   bakery: '🧁',
 };
 
+const TYPE_BG: Record<string, string> = {
+  dish: colors.surfaceRose,
+  dessert: colors.surfaceLavender,
+  drink: colors.surfaceMint,
+  bakery: colors.surfaceButter,
+};
+
 export function RecipeCard({ recipe, onPress, variant = 'vertical' }: RecipeCardProps) {
   const isVertical = variant === 'vertical';
+  const bgColor = TYPE_BG[recipe.type] ?? colors.surfaceAlt;
 
   return (
     <TouchableOpacity
@@ -31,7 +39,7 @@ export function RecipeCard({ recipe, onPress, variant = 'vertical' }: RecipeCard
       onPress={onPress}
       activeOpacity={0.85}
     >
-      <View style={[isVertical ? styles.imageVertical : styles.imageHorizontal, { backgroundColor: colors.surfaceAlt }]}>
+      <View style={[isVertical ? styles.imageVertical : styles.imageHorizontal, { backgroundColor: bgColor }]}>
         {recipe.imageUri ? (
           <Image source={{ uri: recipe.imageUri }} style={isVertical ? styles.imageVertical : styles.imageHorizontal} />
         ) : (
@@ -43,9 +51,11 @@ export function RecipeCard({ recipe, onPress, variant = 'vertical' }: RecipeCard
       <View style={isVertical ? styles.infoVertical : styles.infoHorizontal}>
         <Text style={styles.name} numberOfLines={2}>{recipe.name}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.meta}>{DIFFICULTY_EMOJI[recipe.difficulty] ?? '⚪'}</Text>
-          <Text style={styles.meta}>{recipe.prepTime + recipe.cookTime} min</Text>
-          <Text style={styles.meta}>🍴 {recipe.baseServings}</Text>
+          <Text style={[styles.metaDifficulty, { color: recipe.difficulty === 'easy' ? colors.success : recipe.difficulty === 'hard' ? colors.error : colors.warning }]}>
+            {DIFFICULTY_EMOJI[recipe.difficulty] ?? '●'}
+          </Text>
+          <Text style={styles.meta}>· {recipe.prepTime + recipe.cookTime} min</Text>
+          <Text style={styles.meta}>· {recipe.baseServings} 🍴</Text>
         </View>
         {isVertical && recipe.description ? (
           <Text style={styles.description} numberOfLines={2}>{recipe.description}</Text>
@@ -61,13 +71,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     width: 160,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
   },
   horizontal: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    width: 160,
+    width: 165,
     marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
   },
   imageVertical: {
     width: '100%',
@@ -85,31 +99,39 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   placeholderHorizontal: {
-    fontSize: 36,
+    fontSize: 38,
   },
   infoVertical: {
-    padding: spacing.sm,
+    padding: spacing.sm + 2,
   },
   infoHorizontal: {
-    padding: spacing.sm,
+    padding: spacing.sm + 2,
   },
   name: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.sm + 1,
     fontWeight: '700',
+    fontFamily: fonts.heading,
     color: colors.text,
     marginBottom: 4,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 2,
     alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  metaDifficulty: {
+    fontSize: 9,
+    letterSpacing: -1,
   },
   meta: {
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.textSecondary,
+    fontFamily: fonts.body,
   },
   description: {
     fontSize: 11,
+    fontFamily: fonts.body,
     color: colors.textLight,
     marginTop: 4,
     lineHeight: 15,

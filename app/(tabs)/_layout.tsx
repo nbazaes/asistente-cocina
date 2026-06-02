@@ -1,18 +1,18 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
-import { colors } from '../../src/theme';
+import { colors, fonts } from '../../src/theme';
 
 const TAB_ICONS: Record<string, string> = {
-  home: '🏠',
+  home: '🥐',
   recipes: '📖',
-  ingredients: '🔍',
+  ingredients: '🌿',
   settings: '⚙️',
 };
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.5 }}>
+    <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.45 }}>
       {TAB_ICONS[name] ?? '•'}
     </Text>
   );
@@ -23,19 +23,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.primaryDark,
         tabBarInactiveTintColor: colors.textLight,
         tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.borderSoft,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 64,
+          paddingBottom: 10,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          fontFamily: fonts.body,
         },
       }}
     >

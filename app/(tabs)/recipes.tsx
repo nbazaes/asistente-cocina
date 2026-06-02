@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepositories } from '../../src/data/repositories/RepositoryProvider';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { RecipeCard } from '../../src/components/recipe/RecipeCard';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -44,7 +44,7 @@ export default function RecipesScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mis Recetas</Text>
+        <Text style={styles.title}>Mis recetas</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => router.push('/recipe/add')}
@@ -57,7 +57,7 @@ export default function RecipesScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar receta..."
+          placeholder="Buscar por nombre..."
           placeholderTextColor={colors.textLight}
           value={search}
           onChangeText={setSearch}
@@ -85,8 +85,12 @@ export default function RecipesScreen() {
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
+          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyTitle}>
+            {search ? 'Sin resultados' : 'Sin recetas aún'}
+          </Text>
           <Text style={styles.emptyText}>
-            {search ? 'No se encontraron recetas' : 'No hay recetas aún'}
+            {search ? 'Prueba con otros términos' : 'Crea tu primera receta'}
           </Text>
           {!search && (
             <TouchableOpacity
@@ -132,36 +136,40 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontWeight: '700',
     color: colors.text,
   },
   addBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
+    ...shadows.sm,
   },
   addBtnText: {
     color: colors.white,
     fontWeight: '700',
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
   },
   searchContainer: {
     paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   searchInput: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
+    paddingVertical: spacing.sm + 6,
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   filterRow: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     maxHeight: 44,
   },
   filterContent: {
@@ -170,30 +178,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   filterChipActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: '600',
+    fontFamily: fonts.body,
   },
   filterChipTextActive: {
-    color: colors.white,
+    color: colors.primaryDark,
   },
   grid: {
     padding: spacing.md,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
+    justifyContent: 'center',
   },
   center: {
     flex: 1,
@@ -201,20 +211,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
   emptyText: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   emptyBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.full,
+    ...shadows.sm,
   },
   emptyBtnText: {
     color: colors.white,
     fontWeight: '700',
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
   },
 });

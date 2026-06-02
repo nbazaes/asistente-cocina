@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, borderRadius } from '../../theme';
+import { colors, borderRadius, fonts } from '../../theme';
 
 interface ServingSelectorProps {
   value: number;
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    gap: 24,
   },
   btn: {
     width: 44,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnDisabled: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderSoft,
   },
   btnText: {
     color: colors.white,
@@ -83,15 +83,17 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   value: {
-    fontSize: 34,
-    fontWeight: '800',
+    fontSize: 38,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
     color: colors.text,
   },
   valueScaled: {
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   label: {
     fontSize: 12,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginTop: -2,
   },

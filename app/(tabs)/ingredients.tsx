@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -13,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepositories } from '../../src/data/repositories/RepositoryProvider';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { matchingService, type MatchResult } from '../../src/services/MatchingService';
-import type { UserPantryItem, Recipe, Ingredient, RecipeWithDetails } from '../../src/data/models';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../src/theme';
+import type { UserPantryItem, Recipe, Ingredient } from '../../src/data/models';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
 const COMMON_INGREDIENTS = [
   'harina de trigo', 'huevos', 'leche entera', 'azúcar', 'mantequilla',
@@ -22,6 +21,7 @@ const COMMON_INGREDIENTS = [
   'tomates maduros', 'pechuga de pollo', 'arroz basmati', 'chocolate negro',
   'manzanas', 'canela en polvo', 'leche de coco', 'nueces',
   'pepino', 'pimiento verde', 'arroz redondo', 'curry en polvo',
+  'vainilla', 'queso crema', 'fresas', 'nata para montar',
 ];
 
 export default function IngredientsScreen() {
@@ -67,18 +67,21 @@ export default function IngredientsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Buscar por ingredientes</Text>
-        <Text style={styles.subtitle}>Selecciona lo que tienes en casa</Text>
+        <Text style={styles.title}>Por ingredientes</Text>
+        <Text style={styles.subtitle}>Selecciona lo que tienes en la despensa</Text>
       </View>
 
       {!showResults ? (
         <>
           <View style={styles.pantrySection}>
-            <Text style={styles.sectionLabel}>
-              {pantry.length > 0
-                ? `Ingredientes seleccionados (${pantry.length})`
-                : 'Toca para añadir ingredientes'}
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionBullet}>◆</Text>
+              <Text style={styles.sectionLabel}>
+                {pantry.length > 0
+                  ? `Tu selección · ${pantry.length}`
+                  : 'Toca para añadir ingredientes'}
+              </Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipContent}>
               {pantry.map(item => (
                 <TouchableOpacity
@@ -94,7 +97,10 @@ export default function IngredientsScreen() {
             </ScrollView>
           </View>
 
-          <Text style={styles.sectionLabel}>Ingredientes comunes</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionLabel}>Ingredientes comunes</Text>
+          </View>
           <ScrollView contentContainerStyle={styles.ingredientGrid} showsVerticalScrollIndicator={false}>
             {COMMON_INGREDIENTS.map(name => {
               const selected = pantryNames.includes(name.toLowerCase());
@@ -120,18 +126,23 @@ export default function IngredientsScreen() {
               disabled={pantry.length === 0}
               activeOpacity={0.8}
             >
-              <Text style={styles.searchBtnText}>Buscar recetas ({pantry.length} ingredientes)</Text>
+              <Text style={styles.searchBtnText}>
+                Buscar recetas ({pantry.length} ingredientes)
+              </Text>
             </TouchableOpacity>
           </View>
         </>
       ) : (
         <>
           <View style={styles.resultsHeader}>
-            <Text style={styles.sectionLabel}>
-              {results.length} recetas encontradas
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionBullet}>◆</Text>
+              <Text style={styles.sectionLabel}>
+                {results.length} recetas encontradas
+              </Text>
+            </View>
             <TouchableOpacity onPress={() => setShowResults(false)}>
-              <Text style={styles.backLink}>← Cambiar ingredientes</Text>
+              <Text style={styles.backLink}>← Cambiar selección</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -151,7 +162,7 @@ export default function IngredientsScreen() {
                   </View>
                   <Text style={styles.matchText}>{item.matchPercentage}% de coincidencia</Text>
                   <View style={styles.ingredientTags}>
-                    <Text style={styles.tagLabel}>✅ Tienes: </Text>
+                    <Text style={styles.tagLabel}>Tienes: </Text>
                     {item.matchingIngredients.slice(0, 4).map((ing, i) => (
                       <Text key={i} style={styles.tagGreen}>{ing}{i < Math.min(item.matchingIngredients.length, 4) - 1 ? ', ' : ''}</Text>
                     ))}
@@ -161,7 +172,7 @@ export default function IngredientsScreen() {
                   </View>
                   {item.missingIngredients.length > 0 && (
                     <View style={styles.ingredientTags}>
-                      <Text style={styles.tagLabel}>❌ Te falta: </Text>
+                      <Text style={styles.tagLabel}>Te falta: </Text>
                       {item.missingIngredients.slice(0, 3).map((ing, i) => (
                         <Text key={i} style={styles.tagRed}>{ing}{i < Math.min(item.missingIngredients.length, 3) - 1 ? ', ' : ''}</Text>
                       ))}
@@ -191,28 +202,42 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
+    fontStyle: 'italic',
     marginTop: 4,
   },
   pantrySection: {
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sectionBullet: {
+    fontSize: 12,
+    color: colors.primary,
   },
   sectionLabel: {
     fontSize: fontSize.sm,
     fontWeight: '700',
+    fontFamily: fonts.body,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
   },
   chipRow: {
-    maxHeight: 40,
+    maxHeight: 42,
   },
   chipContent: {
     gap: spacing.sm,
@@ -222,17 +247,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm + 4,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
+    ...shadows.sm,
   },
   chipTextActive: {
     color: colors.white,
     fontSize: fontSize.sm,
     fontWeight: '600',
+    fontFamily: fonts.body,
   },
   chipRemove: {
-    color: colors.white,
+    color: 'rgba(255,255,255,0.7)',
     fontSize: fontSize.sm,
     marginLeft: 2,
   },
@@ -249,18 +276,19 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   ingredientChipSelected: {
-    backgroundColor: colors.primaryLight + '30',
-    borderColor: colors.primary,
+    backgroundColor: colors.surfaceRose,
+    borderColor: colors.primaryLight,
   },
   ingredientChipText: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   ingredientChipTextSelected: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
   },
   bottomBar: {
@@ -269,34 +297,37 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderSoft,
   },
   searchBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    ...shadows.sm,
   },
   searchBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   searchBtnText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
   resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingRight: spacing.md,
     paddingTop: spacing.sm,
   },
   backLink: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
   },
   resultsList: {
@@ -307,6 +338,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     ...shadows.sm,
   },
   resultInfo: {
@@ -315,11 +348,12 @@ const styles = StyleSheet.create({
   resultName: {
     fontSize: fontSize.lg,
     fontWeight: '700',
+    fontFamily: fonts.heading,
     color: colors.text,
   },
   matchBar: {
     height: 6,
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderSoft,
     borderRadius: 3,
     marginTop: 4,
     overflow: 'hidden',
@@ -333,6 +367,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     fontWeight: '600',
+    fontFamily: fonts.body,
     marginTop: 2,
   },
   ingredientTags: {
@@ -343,14 +378,17 @@ const styles = StyleSheet.create({
   tagLabel: {
     fontSize: fontSize.xs,
     fontWeight: '600',
+    fontFamily: fonts.body,
     color: colors.textSecondary,
   },
   tagGreen: {
     fontSize: fontSize.xs,
+    fontFamily: fonts.body,
     color: colors.success,
   },
   tagRed: {
     fontSize: fontSize.xs,
+    fontFamily: fonts.body,
     color: colors.error,
   },
 });

@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../src/stores/useSettingsStore';
 import { AI_PROVIDERS, getProvider } from '../../src/services/AIProviderConfig';
-import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -61,7 +61,10 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Ajustes</Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🤖 Chef IA</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionTitle}>Chef IA</Text>
+          </View>
           <Text style={styles.description}>
             Configura tu API key de IA para usar el asistente de cocina.
             Soporta OpenAI, OpenRouter, DeepSeek, Groq, Mistral, Gemini, Together y xAI.
@@ -205,7 +208,10 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ℹ️ Acerca de</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionTitle}>Acerca de</Text>
+          </View>
           <Text style={styles.description}>
             Asistente de Cocina v1.0.0{'\n'}
             Una app para gestionar tus recetas, escalar porciones y encontrar
@@ -227,7 +233,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.lg,
   },
@@ -235,16 +242,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sectionBullet: {
+    fontSize: 12,
+    color: colors.primary,
   },
   sectionTitle: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
   },
   description: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: spacing.md,
@@ -252,6 +272,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSize.sm,
     fontWeight: '600',
+    fontFamily: fonts.body,
     color: colors.text,
     marginBottom: spacing.xs,
     marginTop: spacing.md,
@@ -259,7 +280,7 @@ const styles = StyleSheet.create({
   picker: {
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
@@ -269,6 +290,7 @@ const styles = StyleSheet.create({
   },
   pickerText: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   pickerArrow: {
@@ -276,11 +298,13 @@ const styles = StyleSheet.create({
     color: colors.textLight,
   },
   link: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
+    fontFamily: fonts.body,
   },
   linkHint: {
     fontSize: fontSize.xs,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
@@ -288,11 +312,12 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   btnRow: {
@@ -303,33 +328,38 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.full,
+    ...shadows.sm,
   },
   saveBtnText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
   },
   clearBtn: {
     backgroundColor: colors.error,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.full,
   },
   clearBtnText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
   },
   statusOk: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.success,
     fontWeight: '600',
     marginTop: spacing.sm,
   },
   statusMissing: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.textLight,
     marginTop: spacing.sm,
   },
@@ -349,6 +379,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.md,
@@ -362,14 +393,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   modalItemSelected: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surfaceRose,
   },
   modalItemText: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   modalItemTextSelected: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
   },
   modalItemCheck: {

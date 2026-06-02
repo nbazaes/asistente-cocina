@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sendMessage, getSystemPrompt } from '../src/services/AIChatbotService';
+import { sendMessage } from '../src/services/AIChatbotService';
 import { useSettingsStore } from '../src/stores/useSettingsStore';
 import { getProvider } from '../src/services/AIProviderConfig';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { colors, spacing, fontSize, borderRadius, fonts } from '../src/theme';
 
 interface Message {
   id: string;
@@ -128,7 +128,10 @@ export default function ChatbotScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🤖 Chef IA</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>Chef IA</Text>
+          <Text style={styles.headerAccent}>✦</Text>
+        </View>
         <View style={{ width: 70 }} />
       </View>
 
@@ -205,31 +208,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSoft,
   },
   backBtn: {
     width: 70,
   },
   backBtnText: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontSize: fontSize.md,
     fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   title: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
   },
+  headerAccent: {
+    fontSize: 14,
+    color: colors.primary,
+  },
   warning: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: colors.surfaceButter,
     padding: spacing.sm + 4,
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.accent,
   },
   warningText: {
     fontSize: fontSize.sm,
-    color: '#856404',
+    fontFamily: fonts.body,
+    color: colors.accentDark,
     textAlign: 'center',
   },
   info: {
@@ -237,11 +254,12 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     borderRadius: borderRadius.sm,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.surfaceMint,
   },
   infoText: {
     fontSize: fontSize.xs,
-    color: '#2E7D32',
+    fontFamily: fonts.body,
+    color: colors.success,
     textAlign: 'center',
     fontWeight: '600',
   },
@@ -257,29 +275,30 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   bubble: {
-    maxWidth: '80%',
+    maxWidth: '82%',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   bubbleAI: {
-    borderTopLeftRadius: 4,
+    borderTopLeftRadius: borderRadius.sm,
   },
   bubbleUser: {
-    backgroundColor: colors.primary,
-    borderTopRightRadius: 4,
-    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+    borderTopRightRadius: borderRadius.sm,
+    borderColor: colors.primaryLight,
   },
   bubbleText: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
     lineHeight: 22,
   },
   bubbleTextUser: {
-    color: colors.white,
+    color: colors.primaryDark,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -291,14 +310,16 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    fontStyle: 'italic',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    borderTopColor: colors.borderSoft,
+    backgroundColor: colors.surface,
   },
   textInput: {
     flex: 1,
@@ -307,6 +328,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
     maxHeight: 100,
   },

@@ -15,7 +15,7 @@ import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { scaleRecipe, getScaledStepsDescription } from '../../src/services/ScalingService';
 import { ServingSelector } from '../../src/components/recipe/ServingSelector';
 import type { RecipeWithDetails, ScaledRecipe } from '../../src/data/models';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: 'Fácil',
@@ -95,7 +95,6 @@ export default function RecipeDetailScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backBtnText}>← Volver</Text>
@@ -106,45 +105,51 @@ export default function RecipeDetailScreen() {
         </View>
 
         <Text style={styles.recipeName}>{recipe.name}</Text>
+        <Text style={styles.flourish}>✦</Text>
         {recipe.description ? (
           <Text style={styles.description}>{recipe.description}</Text>
         ) : null}
 
-        {/* Meta */}
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Text style={styles.metaValue}>{DIFFICULTY_LABELS[recipe.difficulty]}</Text>
             <Text style={styles.metaLabel}>Dificultad</Text>
           </View>
+          <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
-            <Text style={styles.metaValue}>{totalTime}m</Text>
+            <Text style={styles.metaValue}>{totalTime} min</Text>
             <Text style={styles.metaLabel}>Tiempo total</Text>
           </View>
+          <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
             <Text style={styles.metaValue}>{recipe.baseServings}</Text>
-            <Text style={styles.metaLabel}>Base</Text>
+            <Text style={styles.metaLabel}>Rinde para</Text>
           </View>
         </View>
 
-        {/* Serving selector */}
         <View style={styles.servingSection}>
           <Text style={styles.sectionTitle}>Porciones</Text>
           <ServingSelector value={servings} onChange={setServings} baseServing={recipe.baseServings} />
           {servings !== recipe.baseServings && (
             <Text style={styles.scaleNote}>
-              Factor de escala: ×{scaled.scaleFactor.toFixed(1)}
+              ×{scaled.scaleFactor.toFixed(1)} de la receta original
             </Text>
           )}
         </View>
 
-        {/* Ingredients */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Ingredientes {servings !== recipe.baseServings ? `(×${scaled.scaleFactor.toFixed(1)})` : ''}
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionTitle}>
+              Ingredientes
+              {servings !== recipe.baseServings ? ` (×${scaled.scaleFactor.toFixed(1)})` : ''}
+            </Text>
+          </View>
           {groupedIngredients(scaled.scaledIngredients).map((group, gi) => (
             <View key={gi} style={styles.groupSection}>
-              {group.name ? <Text style={styles.groupName}>{group.name}</Text> : null}
+              {group.name ? (
+                <Text style={styles.groupName}>{group.name}</Text>
+              ) : null}
               {group.items.map(ing => (
                 <View key={ing.id} style={styles.ingredientRow}>
                   <Text style={styles.ingredientName}>
@@ -163,9 +168,11 @@ export default function RecipeDetailScreen() {
           ))}
         </View>
 
-        {/* Steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preparación</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionTitle}>Preparación</Text>
+          </View>
           {scaledSteps.map((step, i) => (
             <View key={i} style={styles.stepRow}>
               <View style={styles.stepNumber}>
@@ -220,9 +227,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   backBtnText: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontSize: fontSize.md,
     fontWeight: '600',
+    fontFamily: fonts.body,
   },
   deleteBtn: {
     padding: spacing.sm,
@@ -232,45 +240,70 @@ const styles = StyleSheet.create({
   },
   notFound: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   backLink: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
   recipeName: {
     fontSize: fontSize.hero,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontWeight: '700',
     color: colors.text,
     marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  flourish: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: colors.primaryLight,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
   description: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
-    marginTop: spacing.sm,
+    textAlign: 'center',
     lineHeight: 22,
+    fontStyle: 'italic',
+    paddingHorizontal: spacing.md,
   },
   metaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     ...shadows.sm,
+    gap: spacing.lg,
   },
   metaItem: {
     alignItems: 'center',
   },
+  metaDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.borderSoft,
+  },
   metaValue: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.heading,
+    color: colors.primaryDark,
   },
   metaLabel: {
     fontSize: fontSize.xs,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginTop: 2,
   },
@@ -279,23 +312,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     ...shadows.sm,
   },
   scaleNote: {
     textAlign: 'center',
     fontSize: fontSize.sm,
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '600',
+    fontFamily: fonts.body,
     marginTop: spacing.sm,
   },
   section: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sectionBullet: {
+    fontSize: 12,
+    color: colors.primary,
   },
   sectionTitle: {
     fontSize: fontSize.xl,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.md,
   },
   groupSection: {
     marginBottom: spacing.sm,
@@ -303,9 +349,10 @@ const styles = StyleSheet.create({
   groupName: {
     fontSize: fontSize.sm,
     fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.body,
+    color: colors.primaryDark,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
   },
@@ -315,10 +362,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSoft,
   },
   ingredientName: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
     flex: 1,
     marginRight: spacing.md,
@@ -330,10 +378,11 @@ const styles = StyleSheet.create({
   ingredientQty: {
     fontSize: fontSize.md,
     fontWeight: '600',
+    fontFamily: fonts.body,
     color: colors.text,
   },
   ingredientQtyScaled: {
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   stepRow: {
     flexDirection: 'row',
@@ -352,6 +401,7 @@ const styles = StyleSheet.create({
   stepNumberText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
   },
   stepContent: {
@@ -359,11 +409,13 @@ const styles = StyleSheet.create({
   },
   stepDescription: {
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
     lineHeight: 22,
   },
   stepDuration: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginTop: 4,
     fontWeight: '600',

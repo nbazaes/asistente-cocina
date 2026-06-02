@@ -16,7 +16,7 @@ import { useRepositories } from '../../src/data/repositories/RepositoryProvider'
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import type { Ingredient, Step } from '../../src/data/models';
 import { generateId } from '../../src/data/repositories/local/helpers';
-import { colors, spacing, fontSize, borderRadius, shadows } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
 type FormStep = 'info' | 'ingredients' | 'steps';
 
@@ -162,16 +162,17 @@ export default function AddRecipeScreen() {
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
           <Text style={styles.cancelBtnText}>Cancelar</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nueva Receta</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Nueva receta</Text>
+          <Text style={styles.headerAccent}>✦</Text>
+        </View>
         <View style={{ width: 70 }} />
       </View>
 
-      {/* Step indicator */}
       <View style={styles.stepIndicator}>
         {(Object.keys(stepLabels) as FormStep[]).map((s, i) => (
           <React.Fragment key={s}>
@@ -183,13 +184,12 @@ export default function AddRecipeScreen() {
                 {stepLabels[s]}
               </Text>
             </TouchableOpacity>
-            {i < 2 && <View style={styles.stepLine} />}
+            {i < 2 && <View style={[styles.stepLine, step === s || step === (Object.keys(stepLabels) as FormStep[])[i + 1] ? styles.stepLineActive : null]} />}
           </React.Fragment>
         ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Step 1: Info */}
         {step === 'info' && (
           <View style={styles.stepContent}>
             <Text style={styles.fieldLabel}>Nombre *</Text>
@@ -252,7 +252,6 @@ export default function AddRecipeScreen() {
           </View>
         )}
 
-        {/* Step 2: Ingredients */}
         {step === 'ingredients' && (
           <View style={styles.stepContent}>
             {ingredients.map((ing, idx) => (
@@ -343,7 +342,6 @@ export default function AddRecipeScreen() {
           </View>
         )}
 
-        {/* Step 3: Steps */}
         {step === 'steps' && (
           <View style={styles.stepContent}>
             {steps.map((st, idx) => (
@@ -403,7 +401,7 @@ export default function AddRecipeScreen() {
                 disabled={saving}
                 activeOpacity={0.8}
               >
-                <Text style={styles.saveBtnText}>{saving ? 'Guardando...' : '💾 Guardar Receta'}</Text>
+                <Text style={styles.saveBtnText}>{saving ? 'Guardando...' : '💾 Guardar receta'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -425,27 +423,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSoft,
   },
   cancelBtn: {
     width: 70,
   },
   cancelBtnText: {
     color: colors.error,
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
     fontWeight: '600',
   },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   headerTitle: {
     fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
     fontWeight: '700',
     color: colors.text,
+  },
+  headerAccent: {
+    fontSize: 14,
+    color: colors.primary,
   },
   stepIndicator: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    gap: 0,
   },
   stepDotContainer: {
     alignItems: 'center',
@@ -454,7 +462,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -464,6 +472,7 @@ const styles = StyleSheet.create({
   stepDotText: {
     color: colors.textSecondary,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.sm,
   },
   stepDotTextActive: {
@@ -471,19 +480,23 @@ const styles = StyleSheet.create({
   },
   stepLabel: {
     fontSize: 11,
+    fontFamily: fonts.body,
     color: colors.textLight,
     marginTop: 4,
     fontWeight: '600',
   },
   stepLabelActive: {
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   stepLine: {
     width: 32,
     height: 2,
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderSoft,
     marginHorizontal: spacing.xs,
     marginBottom: 18,
+  },
+  stepLineActive: {
+    backgroundColor: colors.primaryLight,
   },
   scrollContent: {
     padding: spacing.md,
@@ -495,6 +508,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: fontSize.sm,
     fontWeight: '600',
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: 4,
@@ -502,11 +516,12 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: fontSize.md,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   textArea: {
@@ -531,25 +546,28 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
   },
   chipActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
   },
   chipText: {
     fontSize: fontSize.sm,
+    fontFamily: fonts.body,
     color: colors.text,
     fontWeight: '600',
   },
   chipTextActive: {
-    color: colors.white,
+    color: colors.primaryDark,
   },
   card: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     ...shadows.sm,
   },
   cardHeader: {
@@ -561,6 +579,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: fontSize.md,
     fontWeight: '700',
+    fontFamily: fonts.heading,
     color: colors.text,
   },
   removeBtn: {
@@ -578,7 +597,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     alignItems: 'center',
   },
   toggleChipLarge: {
@@ -588,26 +607,27 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   toggleChipActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
+    backgroundColor: colors.surfaceRose,
+    borderColor: colors.primaryLight,
   },
   toggleChipText: {
     fontSize: fontSize.xs,
+    fontFamily: fonts.body,
     color: colors.textSecondary,
     fontWeight: '600',
     textAlign: 'center',
   },
   toggleChipTextActive: {
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   addBtn: {
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.primaryLight,
     borderStyle: 'dashed',
     borderRadius: borderRadius.md,
     padding: spacing.md,
@@ -615,8 +635,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   addBtnText: {
-    color: colors.primary,
+    color: colors.primaryDark,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
   navRow: {
@@ -630,12 +651,13 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     alignItems: 'center',
   },
   prevBtnText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
   nextBtn: {
@@ -644,6 +666,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
+    ...shadows.sm,
   },
   nextBtnDisabled: {
     opacity: 0.5,
@@ -651,6 +674,7 @@ const styles = StyleSheet.create({
   nextBtnText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
   saveBtn: {
@@ -659,6 +683,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.success,
     alignItems: 'center',
+    ...shadows.sm,
   },
   saveBtnDisabled: {
     opacity: 0.6,
@@ -666,6 +691,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: colors.white,
     fontWeight: '700',
+    fontFamily: fonts.body,
     fontSize: fontSize.md,
   },
 });
