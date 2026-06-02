@@ -1,21 +1,25 @@
 import { create } from 'zustand';
 import { initializeAI, resetAI, isInitialized } from '../services/AIChatbotService';
 import { detectProvider, getProvider } from '../services/AIProviderConfig';
+import { setSerperApiKey as configureSerperApi } from '../services/WebSearchService';
 
 interface SettingsState {
   apiKey: string;
   providerId: string;
   modelId: string;
+  serperApiKey: string;
   setApiKey: (key: string) => void;
   clearApiKey: () => void;
   setProviderId: (id: string) => void;
   setModelId: (id: string) => void;
+  setSerperApiKey: (key: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   apiKey: '',
   providerId: 'openai',
   modelId: '',
+  serperApiKey: '',
 
   setApiKey: (key: string) => {
     const trimmed = key.trim();
@@ -58,5 +62,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (state.apiKey) {
       initializeAI(state.apiKey, state.providerId, id);
     }
+  },
+
+  setSerperApiKey: (key: string) => {
+    const trimmed = key.trim();
+    set({ serperApiKey: trimmed });
+    configureSerperApi(trimmed);
   },
 }));

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepositories } from '../../src/data/repositories/RepositoryProvider';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import type { Ingredient, Step } from '../../src/data/models';
+import type { ImportedRecipeData } from '../../src/services/RecipeImportService';
 import { generateId } from '../../src/data/repositories/local/helpers';
 import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
@@ -45,13 +46,18 @@ interface StepForm extends Omit<Step, 'id' | 'recipeId'> {
 export default function AddRecipeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, importedRecipe, importUrl } = useLocalSearchParams<{
+    id?: string;
+    importedRecipe?: string;
+    importUrl?: string;
+  }>();
   const { recipeRepository } = useRepositories();
   const { createRecipe, updateRecipe } = useRecipeStore();
   const [step, setStep] = useState<FormStep>('info');
   const [saving, setSaving] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(false);
   const isEditing = !!id;
+  const isImported = !!importedRecipe;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -71,6 +77,15 @@ export default function AddRecipeScreen() {
   ]);
 
   useEffect(() => {
+    if (importedRecipe) {
+      try {
+        const data = JSON.parse(importedRecipe) as ImportedRecipeData;
+        prefillFromImport(data);
+      } catch {
+        Alert.alert('Error', 'Datos de receta importada inválidos');
+      }
+      return;
+    }
     if (!id) return;
     setLoadingRecipe(true);
     recipeRepository.getById(id).then((r) => {
@@ -99,7 +114,28 @@ export default function AddRecipeScreen() {
       );
       setLoadingRecipe(false);
     });
-  }, [id]);
+  }, [id, importedRecipe]);
+
+  const prefillFromImport = (data: ImportedRecipeData) => {
+    setName(data.name);
+    setDescription(data.description);
+    setType(data.type);
+    setDifficulty(data.difficulty);
+    setBaseServings(String(data.baseServings));
+    setPrepTime(String(data.prepTime));
+    setCookTime(String(data.cookTime));
+    setTags(data.tags.join(', '));
+    setIngredients(
+      data.ingredients.length > 0
+        ? data.ingredients.map((i) => ({ ...i, localId: generateId() }))
+        : [{ localId: generateId(), name: '', quantity: 0, unit: '', optional: false, group: null, scalable: true }],
+    );
+    setSteps(
+      data.steps.length > 0
+        ? data.steps.map((s) => ({ ...s, localId: generateId() }))
+        : [{ localId: generateId(), order: 0, description: '', durationMinutes: null, isTimeDependent: false }],
+    );
+  };
 
   const addIngredient = () => {
     setIngredients(prev => [
@@ -233,11 +269,19 @@ export default function AddRecipeScreen() {
           <Text style={styles.cancelBtnText}>Cancelar</Text>
         </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{isEditing ? 'Editar receta' : 'Nueva receta'}</Text>
+            <Text style={styles.headerTitle}>{isEditing ? 'Editar receta' : isImported ? 'Receta importada' : 'Nueva receta'}</Text>
             <Text style={styles.headerAccent}>✦</Text>
           </View>
         <View style={{ width: 70 }} />
       </View>
+
+      {isImported && importUrl ? (
+        <View style={styles.importBanner}>
+          <Text style={styles.importBannerText}>
+            Importada de {new URL(importUrl).hostname}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.stepIndicator}>
         {(Object.keys(stepLabels) as FormStep[]).map((s, i) => (
@@ -765,5 +809,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.body,
     fontSize: fontSize.md,
+  },
+  importBanner: {
+    backgroundColor: colors.surfaceMint,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  importBannerText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    color: colors.primaryDark,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });

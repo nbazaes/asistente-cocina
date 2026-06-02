@@ -12,30 +12,41 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sendMessage } from '../src/services/AIChatbotService';
+import { sendMessage, type AIToolResult, type ChatMessage } from '../src/services/AIChatbotService';
+import { importFromUrl, type ImportedRecipeData } from '../src/services/RecipeImportService';
 import { useSettingsStore } from '../src/stores/useSettingsStore';
 import { getProvider } from '../src/services/AIProviderConfig';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../src/theme';
+import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../src/theme';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  toolResults?: AIToolResult[];
+}
+
+interface RenderableMessage extends Message {
+  _isSearchResults?: boolean;
+  _isRecipePreview?: boolean;
+  _searchItems?: AIToolResult['searchResults'];
+  _recipeData?: ImportedRecipeData;
+  _importUrl?: string;
 }
 
 export default function ChatbotScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { apiKey, providerId, modelId } = useSettingsStore();
+  const serperApiKey = useSettingsStore((s) => s.serperApiKey);
   const provider = getProvider(providerId);
-  const modelName = provider.models.find(m => m.id === modelId)?.name ?? modelId;
+  const modelName = provider.models.find((m) => m.id === modelId)?.name ?? modelId;
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
       content:
-        '¡Hola! Soy tu chef IA. Pregúntame cualquier cosa sobre cocina: recetas, sustituciones, técnicas, o dime qué ingredientes tienes y te sugiero qué preparar.',
+        '¡Hola! Soy tu chef IA. Pregúntame cualquier cosa sobre cocina: recetas, sustituciones, técnicas, o dime qué ingredientes tienes y te sugiero qué preparar. También puedo buscar recetas online o importarlas si me pasas un enlace.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -53,7 +64,7 @@ export default function ChatbotScreen() {
         content:
           '⚠️ No has configurado una API key. Ve a Ajustes para configurarla.',
       };
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         { id: Date.now().toString() + 'u', role: 'user', content: text },
         errMsg,
@@ -67,53 +78,196 @@ export default function ChatbotScreen() {
       role: 'user',
       content: text,
     };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
+    const history: ChatMessage[] = messages
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+    history.push({ role: 'user' as const, content: text });
+
     try {
-      const history = messages.filter(m => m.role !== 'system');
-      const response = await sendMessage([
-        ...history.map(m => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
-        { role: 'user' as const, content: text },
-      ]);
+      const response = await sendMessage(history);
       const aiMsg: Message = {
         id: Date.now().toString() + 'a',
         role: 'assistant',
-        content: response,
+        content: response.content,
+        toolResults: response.toolResults,
       };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages((prev) => [...prev, aiMsg]);
     } catch (e) {
       const errMsg: Message = {
         id: Date.now().toString() + 'e',
         role: 'assistant',
         content: `Error: ${(e as Error).message}`,
       };
-      setMessages(prev => [...prev, errMsg]);
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setLoading(false);
     }
   }, [input, loading, messages, apiKey]);
 
+  const handleImportUrl = useCallback(
+    async (url: string) => {
+      setLoading(true);
+      try {
+        const recipeData = await importFromUrl(url);
+        const previewMsg: Message = {
+          id: Date.now().toString() + 'i',
+          role: 'system',
+          content: '',
+          toolResults: [
+            { type: 'recipe_import', recipeData, importUrl: url },
+          ],
+        };
+        setMessages((prev) => [...prev, previewMsg]);
+        const aiMsg: Message = {
+          id: Date.now().toString() + 'a',
+          role: 'assistant',
+          content: `¡He importado la receta "${recipeData.name}"! Tiene ${recipeData.ingredients.length} ingredientes, ${recipeData.steps.length} pasos, y se prepara en ${recipeData.prepTime + recipeData.cookTime} minutos. ¿Quieres guardarla?`,
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      } catch (e) {
+        const errMsg: Message = {
+          id: Date.now().toString() + 'e',
+          role: 'assistant',
+          content: `No se pudo importar: ${(e as Error).message}. ¿Quieres que busque recetas similares?`,
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  const handleSaveRecipe = useCallback(
+    (data: ImportedRecipeData, importUrl?: string) => {
+      const params: Record<string, string> = {
+        importedRecipe: JSON.stringify(data),
+      };
+      if (importUrl) params.importUrl = importUrl;
+      router.push({
+        pathname: '/recipe/add',
+        params,
+      } as never);
+    },
+    [router],
+  );
+
   const renderMessage = ({ item }: { item: Message }) => {
+    if (item.role === 'system') {
+      return renderToolResults(item.toolResults);
+    }
+
     const isUser = item.role === 'user';
+    const hasToolContent = item.role === 'assistant' && item.toolResults && item.toolResults.length > 0;
+
     return (
-      <View style={[styles.bubbleRow, isUser && styles.bubbleRowUser]}>
-        <View
-          style={[
-            styles.bubble,
-            isUser ? styles.bubbleUser : styles.bubbleAI,
-          ]}
-        >
-          <Text
-            style={[styles.bubbleText, isUser && styles.bubbleTextUser]}
-          >
-            {item.content}
-          </Text>
-        </View>
+      <View>
+        {isUser ? (
+          <View style={[styles.bubbleRow, styles.bubbleRowUser]}>
+            <View style={[styles.bubble, styles.bubbleUser]}>
+              <Text style={[styles.bubbleText, styles.bubbleTextUser]}>
+                {item.content}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.bubbleRow}>
+            <View style={[styles.bubble, styles.bubbleAI]}>
+              <Text style={styles.bubbleText}>{item.content}</Text>
+            </View>
+          </View>
+        )}
+        {hasToolContent && renderToolResults(item.toolResults!)}
+      </View>
+    );
+  };
+
+  const renderToolResults = (toolResults?: AIToolResult[]) => {
+    if (!toolResults || toolResults.length === 0) return null;
+
+    return (
+      <View style={styles.toolResultsContainer}>
+        {toolResults.map((tr, idx) => {
+          if (tr.type === 'search_results' && tr.searchResults && tr.searchResults.length > 0) {
+            return (
+              <View key={`sr-${idx}`} style={styles.toolCard}>
+                <Text style={styles.toolCardTitle}>Resultados de búsqueda</Text>
+                {tr.searchResults.map((result, ri) => (
+                  <TouchableOpacity
+                    key={`sr-${idx}-${ri}`}
+                    style={styles.searchResultItem}
+                    onPress={() => handleImportUrl(result.url)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.searchResultTitle} numberOfLines={1}>
+                      {result.title}
+                    </Text>
+                    <Text style={styles.searchResultSnippet} numberOfLines={2}>
+                      {result.snippet}
+                    </Text>
+                    <View style={styles.searchResultAction}>
+                      <Text style={styles.searchResultUrl} numberOfLines={1}>
+                        {new URL(result.url).hostname}
+                      </Text>
+                      <Text style={styles.importBtnLabel}>Importar →</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            );
+          }
+
+          if (tr.type === 'search_results' && tr.error) {
+            return (
+              <View key={`se-${idx}`} style={[styles.toolCard, styles.toolCardError]}>
+                <Text style={styles.toolCardErrorText}>{tr.error}</Text>
+              </View>
+            );
+          }
+
+          if (tr.type === 'recipe_import' && tr.recipeData) {
+            const r = tr.recipeData;
+            return (
+              <View key={`ri-${idx}`} style={styles.toolCard}>
+                <Text style={styles.toolCardTitle}>Receta importada</Text>
+                <Text style={styles.recipeName}>{r.name}</Text>
+                <Text style={styles.recipeMeta} numberOfLines={2}>
+                  {r.ingredients.length} ingredientes · {r.steps.length} pasos ·{' '}
+                  {r.prepTime + r.cookTime} min · {r.baseServings} porciones
+                </Text>
+                {tr.importUrl ? (
+                  <Text style={styles.recipeSource} numberOfLines={1}>
+                    Fuente: {new URL(tr.importUrl).hostname}
+                  </Text>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.saveRecipeBtn}
+                  onPress={() => handleSaveRecipe(r, tr.importUrl)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.saveRecipeBtnText}>Guardar receta</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+
+          if (tr.type === 'recipe_import' && tr.error) {
+            return (
+              <View key={`re-${idx}`} style={[styles.toolCard, styles.toolCardError]}>
+                <Text style={styles.toolCardErrorText}>{tr.error}</Text>
+              </View>
+            );
+          }
+
+          return null;
+        })}
       </View>
     );
   };
@@ -145,6 +299,7 @@ export default function ChatbotScreen() {
         <View style={styles.info}>
           <Text style={styles.infoText}>
             {provider.name} · {modelName}
+            {!serperApiKey ? ' (sin búsqueda web)' : ''}
           </Text>
         </View>
       )}
@@ -153,7 +308,7 @@ export default function ChatbotScreen() {
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
         onContentSizeChange={() =>
           flatListRef.current?.scrollToEnd({ animated: true })
@@ -173,7 +328,7 @@ export default function ChatbotScreen() {
           style={styles.textInput}
           value={input}
           onChangeText={setInput}
-          placeholder="Pregunta algo..."
+          placeholder="Pregunta algo o pega un enlace..."
           placeholderTextColor={colors.textLight}
           multiline
           maxLength={500}
@@ -299,6 +454,108 @@ const styles = StyleSheet.create({
   },
   bubbleTextUser: {
     color: colors.primaryDark,
+  },
+  toolResultsContainer: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  toolCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  toolCardError: {
+    backgroundColor: colors.surfaceRose,
+    borderColor: colors.accent,
+  },
+  toolCardTitle: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  toolCardErrorText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    color: colors.error,
+    fontWeight: '600',
+  },
+  searchResultItem: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  searchResultTitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.heading,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  searchResultSnippet: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    lineHeight: 16,
+    marginBottom: spacing.xs,
+  },
+  searchResultAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  searchResultUrl: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textLight,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  importBtnLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  recipeName: {
+    fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  recipeMeta: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  recipeSource: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textLight,
+    marginBottom: spacing.sm,
+  },
+  saveRecipeBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  saveRecipeBtnText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    fontFamily: fonts.body,
   },
   loadingRow: {
     flexDirection: 'row',

@@ -21,12 +21,15 @@ export default function SettingsScreen() {
     apiKey,
     providerId,
     modelId,
+    serperApiKey,
     setApiKey,
     clearApiKey,
     setProviderId,
     setModelId,
+    setSerperApiKey,
   } = useSettingsStore();
   const [keyInput, setKeyInput] = React.useState(apiKey);
+  const [serperKeyInput, setSerperKeyInput] = React.useState(serperApiKey);
   const [showProviderPicker, setShowProviderPicker] = React.useState(false);
   const [showModelPicker, setShowModelPicker] = React.useState(false);
 
@@ -204,6 +207,64 @@ export default function SettingsScreen() {
             <Text style={styles.statusOk}>✓ API key configurada</Text>
           ) : (
             <Text style={styles.statusMissing}>Sin API key configurada</Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionBullet}>◆</Text>
+            <Text style={styles.sectionTitle}>Búsqueda Web</Text>
+          </View>
+          <Text style={styles.description}>
+            Configura tu API key de Serper.dev para buscar recetas online desde el chat.
+            Se busca solo en: recetas.elperiodico.com, directoalpaladar.com y divinacocina.es.
+          </Text>
+
+          <Text style={styles.label}>Serper API Key</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Clave de Serper.dev..."
+            placeholderTextColor={colors.textLight}
+            value={serperKeyInput}
+            onChangeText={setSerperKeyInput}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.linkHint}>
+            Puedes obtener una gratis en{' '}
+            <Text style={styles.link}>https://serper.dev</Text>
+          </Text>
+
+          <View style={styles.btnRow}>
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={() => {
+                setSerperApiKey(serperKeyInput.trim());
+                Alert.alert('Guardado', 'API key de Serper configurada.');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.saveBtnText}>Guardar</Text>
+            </TouchableOpacity>
+            {serperApiKey ? (
+              <TouchableOpacity
+                style={styles.clearBtn}
+                onPress={() => {
+                  setSerperApiKey('');
+                  setSerperKeyInput('');
+                  Alert.alert('Eliminado', 'API key de Serper eliminada.');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.clearBtnText}>Eliminar</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {serperApiKey ? (
+            <Text style={styles.statusOk}>✓ Serper API key configurada</Text>
+          ) : (
+            <Text style={styles.statusMissing}>Sin Serper API key. El chat no podrá buscar recetas online.</Text>
           )}
         </View>
 

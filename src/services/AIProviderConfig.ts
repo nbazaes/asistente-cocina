@@ -36,6 +36,7 @@ export const AI_PROVIDERS: AIProvider[] = [
     keyPrefixes: ['sk-or-'],
     websiteURL: 'https://openrouter.ai/keys',
     models: [
+      { id: 'openrouter/auto', name: 'Auto (gratis)' },
       { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'openai/gpt-4o', name: 'GPT-4o' },
       { id: 'openai/o4-mini', name: 'o4 Mini' },
