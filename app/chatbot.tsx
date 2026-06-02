@@ -16,6 +16,7 @@ import { sendMessage, type AIToolResult, type ChatMessage } from '../src/service
 import { importFromUrl, type ImportedRecipeData } from '../src/services/RecipeImportService';
 import { useSettingsStore } from '../src/stores/useSettingsStore';
 import { getProvider } from '../src/services/AIProviderConfig';
+import { RecipePreviewModal } from '../src/components/chat/RecipePreviewModal';
 import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../src/theme';
 
 interface Message {
@@ -23,14 +24,6 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   toolResults?: AIToolResult[];
-}
-
-interface RenderableMessage extends Message {
-  _isSearchResults?: boolean;
-  _isRecipePreview?: boolean;
-  _searchItems?: AIToolResult['searchResults'];
-  _recipeData?: ImportedRecipeData;
-  _importUrl?: string;
 }
 
 export default function ChatbotScreen() {
@@ -51,6 +44,9 @@ export default function ChatbotScreen() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalRecipe, setModalRecipe] = useState<ImportedRecipeData | null>(null);
+  const [modalUrl, setModalUrl] = useState<string | undefined>(undefined);
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const handleSend = useCallback(async () => {
@@ -111,42 +107,9 @@ export default function ChatbotScreen() {
     }
   }, [input, loading, messages, apiKey]);
 
-  const handleImportUrl = useCallback(
-    async (url: string) => {
-      setLoading(true);
-      try {
-        const recipeData = await importFromUrl(url);
-        const previewMsg: Message = {
-          id: Date.now().toString() + 'i',
-          role: 'system',
-          content: '',
-          toolResults: [
-            { type: 'recipe_import', recipeData, importUrl: url },
-          ],
-        };
-        setMessages((prev) => [...prev, previewMsg]);
-        const aiMsg: Message = {
-          id: Date.now().toString() + 'a',
-          role: 'assistant',
-          content: `¡He importado la receta "${recipeData.name}"! Tiene ${recipeData.ingredients.length} ingredientes, ${recipeData.steps.length} pasos, y se prepara en ${recipeData.prepTime + recipeData.cookTime} minutos. ¿Quieres guardarla?`,
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-      } catch (e) {
-        const errMsg: Message = {
-          id: Date.now().toString() + 'e',
-          role: 'assistant',
-          content: `No se pudo importar: ${(e as Error).message}. ¿Quieres que busque recetas similares?`,
-        };
-        setMessages((prev) => [...prev, errMsg]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
-
   const handleSaveRecipe = useCallback(
     (data: ImportedRecipeData, importUrl?: string) => {
+      setModalVisible(false);
       const params: Record<string, string> = {
         importedRecipe: JSON.stringify(data),
       };
@@ -158,6 +121,45 @@ export default function ChatbotScreen() {
     },
     [router],
   );
+
+  const handleQuickImport = useCallback(
+    async (url: string) => {
+      setLoading(true);
+      try {
+        const recipeData = await importFromUrl(url);
+        handleSaveRecipe(recipeData, url);
+      } catch (e) {
+        const errMsg: Message = {
+          id: Date.now().toString() + 'e',
+          role: 'assistant',
+          content: `No se pudo importar: ${(e as Error).message}. ¿Quieres que busque recetas similares?`,
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleSaveRecipe],
+  );
+
+  const handleImportModal = useCallback(async (url: string) => {
+    setLoading(true);
+    try {
+      const recipeData = await importFromUrl(url);
+      setModalRecipe(recipeData);
+      setModalUrl(url);
+      setModalVisible(true);
+    } catch (e) {
+      const errMsg: Message = {
+        id: Date.now().toString() + 'e',
+        role: 'assistant',
+        content: `No se pudo importar: ${(e as Error).message}. ¿Quieres que busque recetas similares?`,
+      };
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.role === 'system') {
@@ -200,12 +202,7 @@ export default function ChatbotScreen() {
               <View key={`sr-${idx}`} style={styles.toolCard}>
                 <Text style={styles.toolCardTitle}>Resultados de búsqueda</Text>
                 {tr.searchResults.map((result, ri) => (
-                  <TouchableOpacity
-                    key={`sr-${idx}-${ri}`}
-                    style={styles.searchResultItem}
-                    onPress={() => handleImportUrl(result.url)}
-                    activeOpacity={0.7}
-                  >
+                  <View key={`sr-${idx}-${ri}`} style={styles.searchResultItem}>
                     <Text style={styles.searchResultTitle} numberOfLines={1}>
                       {result.title}
                     </Text>
@@ -216,9 +213,26 @@ export default function ChatbotScreen() {
                       <Text style={styles.searchResultUrl} numberOfLines={1}>
                         {new URL(result.url).hostname}
                       </Text>
-                      <Text style={styles.importBtnLabel}>Importar →</Text>
+                      <View style={styles.searchResultBtns}>
+                        <TouchableOpacity
+                          style={styles.viewBtn}
+                          onPress={async () => {
+                            handleImportModal(result.url);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.viewBtnText}>Ver</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.importBtn}
+                          onPress={() => handleQuickImport(result.url)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.importBtnText}>Importar →</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </View>
             );
@@ -347,6 +361,13 @@ export default function ChatbotScreen() {
           <Text style={styles.sendBtnText}>↑</Text>
         </TouchableOpacity>
       </View>
+      <RecipePreviewModal
+        visible={modalVisible}
+        recipe={modalRecipe}
+        importUrl={modalUrl}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSaveRecipe}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -522,6 +543,36 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: fonts.body,
     color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  searchResultBtns: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  viewBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  viewBtnText: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  importBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  importBtnText: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.white,
     fontWeight: '700',
   },
   recipeName: {
