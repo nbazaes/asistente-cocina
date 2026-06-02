@@ -5,11 +5,12 @@
 - React Native 0.85 + React 19 + TypeScript 6.0 (strict mode)
 - expo-sqlite + drizzle-orm (local SQLite DB)
 - Zustand v5 for state management
-- Multiple AI providers via `openai` npm package (used as universal OpenAI-compatible client)
+- Multiple AI providers via `openai` package (used as universal OpenAI-compatible client)
+- pnpm as package manager
 
 ## Commands
-- `npm start` — Expo dev server
-- `npm run android` / `npm run ios` / `npm run web` — platform-specific starts
+- `pnpm start` — Expo dev server
+- `pnpm android` / `pnpm ios` / `pnpm web` — platform-specific starts
 - No lint, typecheck, or test scripts configured yet
 
 ## Architecture
