@@ -25,15 +25,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const trimmed = key.trim();
     const detectedProvider = trimmed ? detectProvider(trimmed) : 'openai';
     const provider = getProvider(detectedProvider);
+    const state = get();
+
+    const providerChanged = detectedProvider !== state.providerId;
+    const model = providerChanged || !state.modelId ? provider.defaultModel : state.modelId;
 
     set({
       apiKey: trimmed,
       providerId: detectedProvider,
-      modelId: provider.defaultModel,
+      modelId: model,
     });
 
     if (trimmed) {
-      initializeAI(trimmed, detectedProvider, provider.defaultModel);
+      initializeAI(trimmed, detectedProvider, model);
     } else {
       resetAI();
     }
