@@ -26,7 +26,6 @@ jobs:
         run: pnpm dlx eas-cli build --platform android --profile production --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
