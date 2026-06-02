@@ -85,17 +85,6 @@ export default function DashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.accentDark }]}
-            onPress={() => router.push('/ingredients' as any)}
-            activeOpacity={0.85}
-          >
-            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-              <Text style={styles.actionIcon}>🌿</Text>
-            </View>
-            <Text style={styles.actionLabel}>Por{'\n'}Ingredientes</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: colors.lavender }]}
             onPress={() => router.push('/chatbot')}
             activeOpacity={0.85}

@@ -6,7 +6,6 @@ import { colors, fonts } from '../../src/theme';
 const TAB_ICONS: Record<string, string> = {
   home: '🥐',
   recipes: '📖',
-  ingredients: '🌿',
   settings: '⚙️',
 };
 
@@ -52,13 +51,6 @@ export default function TabLayout() {
         options={{
           title: 'Recetas',
           tabBarIcon: ({ focused }) => <TabIcon name="recipes" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="ingredients"
-        options={{
-          title: 'Ingredientes',
-          tabBarIcon: ({ focused }) => <TabIcon name="ingredients" focused={focused} />,
         }}
       />
       <Tabs.Screen
