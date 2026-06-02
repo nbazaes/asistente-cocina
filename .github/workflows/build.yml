@@ -33,13 +33,27 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build APK with EAS
-        run: pnpm dlx eas-cli build --platform android --profile production --non-interactive --wait
+        id: build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          json=$(pnpm dlx eas-cli build --platform android --profile production --non-interactive --json --wait)
+          build_id=$(echo "$json" | jq -r '.[0].id // .id')
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
+          echo "Build ID: $build_id"
+
+      - name: Download APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          project_id=$(jq -r '.expo.extra.eas.projectId' app.json)
+          curl -sSfL -o app-release.apk \
+            -H "Authorization: Bearer $EXPO_TOKEN" \
+            "https://api.expo.dev/v2/projects/$project_id/builds/${{ steps.build.outputs.build_id }}/artifacts"
 
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: "*.apk"
+          files: app-release.apk
