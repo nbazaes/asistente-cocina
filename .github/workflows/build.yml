@@ -15,10 +15,14 @@ jobs:
           fetch-depth: 0
 
       - name: Sync version from tag
+        id: version
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
+          SLUG=$(jq -r '.expo.slug' app.json)
           jq --arg v "$VERSION" '.expo.version = $v' app.json > app.tmp.json
           mv app.tmp.json app.json
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -43,17 +47,20 @@ jobs:
           echo "Build ID: $build_id"
 
       - name: Download APK
+        id: download
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           project_id=$(jq -r '.expo.extra.eas.projectId' app.json)
-          curl -sSfL -o app-release.apk \
+          filename="${{ steps.version.outputs.slug }}-${{ steps.version.outputs.version }}.apk"
+          curl -sSfL -o "$filename" \
             -H "Authorization: Bearer $EXPO_TOKEN" \
             "https://api.expo.dev/v2/projects/$project_id/builds/${{ steps.build.outputs.build_id }}/artifacts"
+          echo "filename=$filename" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: app-release.apk
+          files: ${{ steps.download.outputs.filename }}
