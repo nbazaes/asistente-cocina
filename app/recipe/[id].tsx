@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { useRepositories } from '../../src/data/repositories/RepositoryProvider'
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { scaleRecipe, getScaledStepsDescription } from '../../src/services/ScalingService';
 import { ServingSelector } from '../../src/components/recipe/ServingSelector';
+import { ChatbotView } from '../../src/components/chat/ChatbotView';
 import type { RecipeWithDetails, ScaledRecipe } from '../../src/data/models';
 import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
@@ -32,6 +34,7 @@ export default function RecipeDetailScreen() {
   const [recipe, setRecipe] = useState<RecipeWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(0);
+  const [chatModalVisible, setChatModalVisible] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -195,6 +198,23 @@ export default function RecipeDetailScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.chatFab}
+        onPress={() => setChatModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.chatFabText}>✦</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={chatModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setChatModalVisible(false)}
+      >
+        <ChatbotView onClose={() => setChatModalVisible(false)} />
+      </Modal>
     </View>
   );
 }
@@ -435,5 +455,23 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
     fontWeight: '600',
+  },
+  chatFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.md,
+    elevation: 6,
+  },
+  chatFabText: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
   },
 });
