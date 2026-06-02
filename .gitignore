@@ -50,3 +50,6 @@ yarn-error.*
 
 # Tern/Eclipse
 .tern-port
+
+# Tareas locales
+tareas.md
