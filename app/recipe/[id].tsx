@@ -99,9 +99,14 @@ export default function RecipeDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backBtnText}>← Volver</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-            <Text style={styles.deleteBtnText}>🗑️</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push(`/recipe/add?id=${recipe.id}`)} style={styles.editBtn}>
+              <Text style={styles.editBtnText}>✏️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
+              <Text style={styles.deleteBtnText}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.recipeName}>{recipe.name}</Text>
@@ -231,6 +236,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  editBtn: {
+    padding: spacing.sm,
+  },
+  editBtnText: {
+    fontSize: 20,
   },
   deleteBtn: {
     padding: spacing.sm,

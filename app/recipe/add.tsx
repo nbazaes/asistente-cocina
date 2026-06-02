@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRepositories } from '../../src/data/repositories/RepositoryProvider';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
@@ -44,10 +45,13 @@ interface StepForm extends Omit<Step, 'id' | 'recipeId'> {
 export default function AddRecipeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const { recipeRepository } = useRepositories();
-  const { createRecipe } = useRecipeStore();
+  const { createRecipe, updateRecipe } = useRecipeStore();
   const [step, setStep] = useState<FormStep>('info');
   const [saving, setSaving] = useState(false);
+  const [loadingRecipe, setLoadingRecipe] = useState(false);
+  const isEditing = !!id;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -65,6 +69,37 @@ export default function AddRecipeScreen() {
   const [steps, setSteps] = useState<StepForm[]>([
     { localId: generateId(), order: 0, description: '', durationMinutes: null, isTimeDependent: false },
   ]);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoadingRecipe(true);
+    recipeRepository.getById(id).then((r) => {
+      if (!r) {
+        Alert.alert('Error', 'Receta no encontrada');
+        router.back();
+        return;
+      }
+      setName(r.name);
+      setDescription(r.description);
+      setType(r.type);
+      setDifficulty(r.difficulty);
+      setBaseServings(String(r.baseServings));
+      setPrepTime(String(r.prepTime));
+      setCookTime(String(r.cookTime));
+      setTags(r.tags.join(', '));
+      setIngredients(
+        r.ingredients.length > 0
+          ? r.ingredients.map((i) => ({ ...i, localId: generateId() }))
+          : [{ localId: generateId(), name: '', quantity: 0, unit: '', optional: false, group: null, scalable: true }],
+      );
+      setSteps(
+        r.steps.length > 0
+          ? r.steps.map((s) => ({ ...s, localId: generateId() }))
+          : [{ localId: generateId(), order: 0, description: '', durationMinutes: null, isTimeDependent: false }],
+      );
+      setLoadingRecipe(false);
+    });
+  }, [id]);
 
   const addIngredient = () => {
     setIngredients(prev => [
@@ -128,24 +163,55 @@ export default function AddRecipeScreen() {
         .filter(s => s.description.trim())
         .map((s, idx) => ({ ...s, order: idx }));
 
-      await createRecipe(
-        recipeRepository,
-        {
-          name: name.trim(),
-          description: description.trim(),
-          imageUri: null,
-          baseServings: parseInt(baseServings, 10),
-          prepTime: parseInt(prepTime, 10) || 0,
-          cookTime: parseInt(cookTime, 10) || 0,
-          difficulty: difficulty as 'easy' | 'medium' | 'hard',
-          type: type as 'dish' | 'dessert' | 'drink' | 'bakery',
-          tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        },
-        validIngredients.map(({ localId, ...ing }) => ing),
-        validSteps.map(({ localId, ...st }) => st),
-      );
+      const recipeData = {
+        id: id ?? generateId(),
+        name: name.trim(),
+        description: description.trim(),
+        imageUri: null as string | null,
+        baseServings: parseInt(baseServings, 10),
+        prepTime: parseInt(prepTime, 10) || 0,
+        cookTime: parseInt(cookTime, 10) || 0,
+        difficulty: difficulty as 'easy' | 'medium' | 'hard',
+        type: type as 'dish' | 'dessert' | 'drink' | 'bakery',
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-      Alert.alert('¡Listo!', 'Receta creada correctamente', [
+      if (isEditing) {
+        const ingredientList = validIngredients.map(({ localId, ...ing }) => ({
+          ...ing,
+          id: (ing as unknown as { id?: string }).id ?? generateId(),
+          recipeId: id!,
+        })) as Ingredient[];
+
+        const stepList = validSteps.map(({ localId, ...st }) => ({
+          ...st,
+          id: (st as unknown as { id?: string }).id ?? generateId(),
+          recipeId: id!,
+        })) as Step[];
+
+        await updateRecipe(recipeRepository, recipeData, ingredientList, stepList);
+      } else {
+        await createRecipe(
+          recipeRepository,
+          {
+            name: name.trim(),
+            description: description.trim(),
+            imageUri: null,
+            baseServings: parseInt(baseServings, 10),
+            prepTime: parseInt(prepTime, 10) || 0,
+            cookTime: parseInt(cookTime, 10) || 0,
+            difficulty: difficulty as 'easy' | 'medium' | 'hard',
+            type: type as 'dish' | 'dessert' | 'drink' | 'bakery',
+            tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+          },
+          validIngredients.map(({ localId, ...ing }) => ing),
+          validSteps.map(({ localId, ...st }) => st),
+        );
+      }
+
+      Alert.alert('¡Listo!', isEditing ? 'Receta actualizada correctamente' : 'Receta creada correctamente', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e) {
@@ -166,10 +232,10 @@ export default function AddRecipeScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
           <Text style={styles.cancelBtnText}>Cancelar</Text>
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Nueva receta</Text>
-          <Text style={styles.headerAccent}>✦</Text>
-        </View>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>{isEditing ? 'Editar receta' : 'Nueva receta'}</Text>
+            <Text style={styles.headerAccent}>✦</Text>
+          </View>
         <View style={{ width: 70 }} />
       </View>
 
@@ -189,6 +255,11 @@ export default function AddRecipeScreen() {
         ))}
       </View>
 
+      {loadingRecipe ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {step === 'info' && (
           <View style={styles.stepContent}>
@@ -401,12 +472,13 @@ export default function AddRecipeScreen() {
                 disabled={saving}
                 activeOpacity={0.8}
               >
-                <Text style={styles.saveBtnText}>{saving ? 'Guardando...' : '💾 Guardar receta'}</Text>
+                  <Text style={styles.saveBtnText}>{saving ? 'Guardando...' : isEditing ? '💾 Guardar cambios' : '💾 Guardar receta'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
       </ScrollView>
+      )}
     </KeyboardAvoidingView>
   );
 }
