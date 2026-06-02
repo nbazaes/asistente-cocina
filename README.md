@@ -17,32 +17,34 @@ Aplicación móvil de asistente culinario con inteligencia artificial, construid
 - **expo-sqlite** + drizzle-orm (base de datos SQLite local)
 - **Zustand v5** (estado global)
 - **openai** (cliente universal compatible con OpenAI para múltiples proveedores de IA)
+- **pnpm** (gestor de paquetes)
 
 ## Requisitos
 
 - Node.js 18 o superior
+- pnpm
 - Expo CLI (`npx expo`)
 
 ## Instalación
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## Ejecución
 
 ```bash
 # Iniciar servidor de desarrollo
-npm start
+pnpm start
 
 # Android
-npm run android
+pnpm android
 
 # iOS
-npm run ios
+pnpm ios
 
 # Web
-npm run web
+pnpm web
 ```
 
 ## Estructura del proyecto
