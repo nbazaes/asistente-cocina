@@ -349,8 +349,8 @@ export function ChatbotView({ onClose }: Props) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: onClose ? 0 : insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : insets.top}
     >
       <View style={styles.header}>
         <TouchableOpacity
