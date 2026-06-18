@@ -5,6 +5,9 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { RepositoryProvider } from '../src/data/repositories/RepositoryProvider';
 import { runMigrations } from '../src/data/database/migrations';
 import { seedIfEmpty } from '../src/data/database/seed';
+import { useSettingsStore } from '../src/stores/useSettingsStore';
+import { initializeAI } from '../src/services/AIChatbotService';
+import { setSerperApiKey } from '../src/services/WebSearchService';
 import { colors, fonts } from '../src/theme';
 
 function AppContent() {
@@ -16,6 +19,17 @@ function AppContent() {
       try {
         await runMigrations();
         await seedIfEmpty();
+
+        await useSettingsStore.persist.rehydrate();
+
+        const { apiKey, providerId, modelId, serperApiKey } = useSettingsStore.getState();
+        if (apiKey) {
+          initializeAI(apiKey, providerId, modelId);
+        }
+        if (serperApiKey) {
+          setSerperApiKey(serperApiKey);
+        }
+
         setReady(true);
       } catch (e) {
         setError((e as Error).message);

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { initializeAI, resetAI, isInitialized } from '../services/AIChatbotService';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { secureStorage } from '../data/storage/secureStorage';
+import { initializeAI, resetAI } from '../services/AIChatbotService';
 import { detectProvider, getProvider } from '../services/AIProviderConfig';
 import { setSerperApiKey as configureSerperApi } from '../services/WebSearchService';
 
@@ -15,62 +17,77 @@ interface SettingsState {
   setSerperApiKey: (key: string) => void;
 }
 
-export const useSettingsStore = create<SettingsState>((set, get) => ({
-  apiKey: '',
-  providerId: 'openai',
-  modelId: '',
-  serperApiKey: '',
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set, get) => ({
+      apiKey: '',
+      providerId: 'openai',
+      modelId: '',
+      serperApiKey: '',
 
-  setApiKey: (key: string) => {
-    const trimmed = key.trim();
-    const detectedProvider = trimmed ? detectProvider(trimmed) : 'openai';
-    const provider = getProvider(detectedProvider);
-    const state = get();
+      setApiKey: (key: string) => {
+        const trimmed = key.trim();
+        const detectedProvider = trimmed ? detectProvider(trimmed) : 'openai';
+        const provider = getProvider(detectedProvider);
+        const state = get();
 
-    const providerChanged = detectedProvider !== state.providerId;
-    const model = providerChanged || !state.modelId ? provider.defaultModel : state.modelId;
+        const providerChanged = detectedProvider !== state.providerId;
+        const model = providerChanged || !state.modelId ? provider.defaultModel : state.modelId;
 
-    set({
-      apiKey: trimmed,
-      providerId: detectedProvider,
-      modelId: model,
-    });
+        set({
+          apiKey: trimmed,
+          providerId: detectedProvider,
+          modelId: model,
+        });
 
-    if (trimmed) {
-      initializeAI(trimmed, detectedProvider, model);
-    } else {
-      resetAI();
+        if (trimmed) {
+          initializeAI(trimmed, detectedProvider, model);
+        } else {
+          resetAI();
+        }
+      },
+
+      clearApiKey: () => {
+        set({ apiKey: '', providerId: 'openai', modelId: '' });
+        resetAI();
+      },
+
+      setProviderId: (id: string) => {
+        const state = get();
+        const provider = getProvider(id);
+
+        set({ providerId: id, modelId: provider.defaultModel });
+
+        if (state.apiKey) {
+          initializeAI(state.apiKey, id, provider.defaultModel);
+        }
+      },
+
+      setModelId: (id: string) => {
+        const state = get();
+        set({ modelId: id });
+
+        if (state.apiKey) {
+          initializeAI(state.apiKey, state.providerId, id);
+        }
+      },
+
+      setSerperApiKey: (key: string) => {
+        const trimmed = key.trim();
+        set({ serperApiKey: trimmed });
+        configureSerperApi(trimmed);
+      },
+    }),
+    {
+      name: 'settings',
+      storage: createJSONStorage(() => secureStorage),
+      skipHydration: true,
+      partialize: (state) => ({
+        apiKey: state.apiKey,
+        providerId: state.providerId,
+        modelId: state.modelId,
+        serperApiKey: state.serperApiKey,
+      }),
     }
-  },
-
-  clearApiKey: () => {
-    set({ apiKey: '', providerId: 'openai', modelId: '' });
-    resetAI();
-  },
-
-  setProviderId: (id: string) => {
-    const state = get();
-    const provider = getProvider(id);
-
-    set({ providerId: id, modelId: provider.defaultModel });
-
-    if (state.apiKey) {
-      initializeAI(state.apiKey, id, provider.defaultModel);
-    }
-  },
-
-  setModelId: (id: string) => {
-    const state = get();
-    set({ modelId: id });
-
-    if (state.apiKey) {
-      initializeAI(state.apiKey, state.providerId, id);
-    }
-  },
-
-  setSerperApiKey: (key: string) => {
-    const trimmed = key.trim();
-    set({ serperApiKey: trimmed });
-    configureSerperApi(trimmed);
-  },
-}));
+  )
+);
