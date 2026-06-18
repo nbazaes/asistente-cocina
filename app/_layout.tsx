@@ -81,6 +81,13 @@ function AppContent() {
             animation: 'slide_from_right',
           }}
         />
+        <Stack.Screen
+          name="legal/politica-privacidad"
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+          }}
+        />
       </Stack>
     </>
   );

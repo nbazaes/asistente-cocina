@@ -9,7 +9,10 @@ import {
   Alert,
   Modal,
   FlatList,
+  Linking,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../src/stores/useSettingsStore';
 import { AI_PROVIDERS, getProvider } from '../../src/services/AIProviderConfig';
@@ -17,6 +20,7 @@ import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../s
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     apiKey,
     providerId,
@@ -274,10 +278,34 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>Acerca de</Text>
           </View>
           <Text style={styles.description}>
-            Asistente de Cocina v1.0.0{'\n'}
-            Una app para gestionar tus recetas, escalar porciones y encontrar
-            platos según los ingredientes que tienes en casa.
+            Asistente de Cocina es una app libre y gratuita para gestionar
+            recetas, escalar porciones y recibir sugerencias según los
+            ingredientes que tienes en casa. Incluye un asistente con
+            inteligencia artificial. Código abierto bajo licencia MIT.
           </Text>
+          <Text style={styles.version}>
+            Versión {Constants.expoConfig?.version ?? '1.0.0'}
+          </Text>
+          <View style={styles.aboutLinks}>
+            <TouchableOpacity
+              style={styles.aboutLink}
+              onPress={() => router.push('/legal/politica-privacidad')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.aboutLinkText}>Política de Privacidad</Text>
+              <Text style={styles.aboutLinkArrow}>→</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.aboutLink}
+              onPress={() =>
+                Linking.openURL('https://github.com/nbazaes/asistente-cocina')
+              }
+              activeOpacity={0.7}
+            >
+              <Text style={styles.aboutLinkText}>GitHub</Text>
+              <Text style={styles.aboutLinkArrow}>→</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -469,5 +497,33 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
     fontSize: fontSize.md,
+  },
+  version: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textLight,
+    marginBottom: spacing.sm,
+  },
+  aboutLinks: {
+    gap: spacing.xs,
+  },
+  aboutLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: borderRadius.sm,
+  },
+  aboutLinkText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  aboutLinkArrow: {
+    fontSize: fontSize.md,
+    color: colors.primaryDark,
   },
 });
