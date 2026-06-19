@@ -15,7 +15,7 @@ import { useRepositories } from '../../src/data/repositories/RepositoryProvider'
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { scaleRecipe, getScaledStepsDescription } from '../../src/services/ScalingService';
 import { ServingSelector } from '../../src/components/recipe/ServingSelector';
-import { ChatbotView } from '../../src/components/chat/ChatbotView';
+import { ChatbotView, type RecipeContext } from '../../src/components/chat/ChatbotView';
 import type { RecipeWithDetails, ScaledRecipe } from '../../src/data/models';
 import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../src/theme';
 
@@ -54,6 +54,24 @@ export default function RecipeDetailScreen() {
     if (!recipe) return [];
     return getScaledStepsDescription(recipe.steps, servings / recipe.baseServings);
   }, [recipe, servings]);
+
+  const recipeContext = useMemo<RecipeContext | null>(() => {
+    if (!recipe) return null;
+    return {
+      name: recipe.name,
+      description: recipe.description ?? undefined,
+      ingredients: recipe.ingredients
+        .map((i) => `${i.quantity} ${i.unit} de ${i.name}${i.optional ? ' (opcional)' : ''}`)
+        .join('; '),
+      steps: recipe.steps
+        .map((s, i) => `${i + 1}. ${s.description}${s.durationMinutes ? ` (${s.durationMinutes} min)` : ''}`)
+        .join(' | '),
+      difficulty: DIFFICULTY_LABELS[recipe.difficulty] ?? recipe.difficulty,
+      prepTime: recipe.prepTime,
+      cookTime: recipe.cookTime,
+      baseServings: recipe.baseServings,
+    };
+  }, [recipe]);
 
   const handleDelete = () => {
     if (!recipe) return;
@@ -213,7 +231,7 @@ export default function RecipeDetailScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setChatModalVisible(false)}
       >
-        <ChatbotView onClose={() => setChatModalVisible(false)} />
+        <ChatbotView onClose={() => setChatModalVisible(false)} recipeContext={recipeContext} />
       </Modal>
     </View>
   );

@@ -84,11 +84,35 @@ function parseMarkdown(text: string): { text: string; bold: boolean; italic: boo
   return segments;
 }
 
-interface Props {
-  onClose?: () => void;
+export interface RecipeContext {
+  name: string;
+  description?: string;
+  ingredients: string;
+  steps: string;
+  difficulty: string;
+  prepTime: number;
+  cookTime: number;
+  baseServings: number;
 }
 
-export function ChatbotView({ onClose }: Props) {
+interface Props {
+  onClose?: () => void;
+  recipeContext?: RecipeContext | null;
+}
+
+function buildRecipeSystemMessage(ctx: RecipeContext): string {
+  const parts = [
+    `[CONTEXTO] El usuario está viendo la receta "${ctx.name}".`,
+    ctx.description ? `Descripción: ${ctx.description}` : '',
+    `Dificultad: ${ctx.difficulty} · Preparación: ${ctx.prepTime} min · Cocción: ${ctx.cookTime} min · Porciones base: ${ctx.baseServings}`,
+    `Ingredientes: ${ctx.ingredients}`,
+    `Pasos: ${ctx.steps}`,
+    'Usa esta información para responder preguntas sobre esta receta específica (sustituciones, técnicas, ajustes de cantidades, dudas sobre los pasos, etc.). Si el usuario pregunta algo que no está relacionado con esta receta, responde normalmente.',
+  ];
+  return parts.filter(Boolean).join('\n');
+}
+
+export function ChatbotView({ onClose, recipeContext }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { apiKey, providerId, modelId } = useSettingsStore();
@@ -96,14 +120,23 @@ export function ChatbotView({ onClose }: Props) {
   const provider = getProvider(providerId);
   const modelName = provider.models.find((m) => m.id === modelId)?.name ?? modelId;
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  const getInitialMessage = (): Message => {
+    if (recipeContext) {
+      return {
+        id: '1',
+        role: 'assistant',
+        content: `¡Hola! Veo que estás viendo *${recipeContext.name}*. ¿En qué te puedo ayudar con esta receta? Puedo explicarte los pasos, sugerir sustituciones de ingredientes, ajustar las cantidades para más o menos porciones, o resolver cualquier duda que tengas.`,
+      };
+    }
+    return {
       id: '1',
       role: 'assistant',
       content:
         '¡Hola! Soy tu chef IA. Pregúntame cualquier cosa sobre cocina: recetas, sustituciones, técnicas, o dime qué ingredientes tienes y te sugiero qué preparar. También puedo buscar recetas online o importarlas si me pasas un enlace.',
-    },
-  ]);
+    };
+  };
+
+  const [messages, setMessages] = useState<Message[]>([getInitialMessage()]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -140,12 +173,23 @@ export function ChatbotView({ onClose }: Props) {
     setInput('');
     setLoading(true);
 
-    const history: ChatMessage[] = messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      }));
+    const history: ChatMessage[] = [];
+
+    if (recipeContext) {
+      history.push({
+        role: 'system',
+        content: buildRecipeSystemMessage(recipeContext),
+      });
+    }
+
+    history.push(
+      ...messages
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+    );
     history.push({ role: 'user' as const, content: text });
 
     try {
@@ -167,7 +211,7 @@ export function ChatbotView({ onClose }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, apiKey]);
+  }, [input, loading, messages, apiKey, recipeContext]);
 
   const handleSaveRecipe = useCallback(
     (data: ImportedRecipeData, importUrl?: string) => {
