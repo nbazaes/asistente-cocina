@@ -22,7 +22,6 @@ class SerperWebSearchService implements WebSearchService {
 
     const siteFilters = [
       'site:recetas.elperiodico.com',
-      'site:directoalpaladar.com',
       'site:divinacocina.es',
     ];
     const searchQuery = `${query} ${siteFilters.join(' OR ')}`;

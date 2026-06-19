@@ -7,7 +7,7 @@ Aplicación móvil de asistente culinario con inteligencia artificial, construid
 **No más ideas para cenar.** El asistente combina tres capacidades que se potencian entre sí:
 
 - **Despensa inteligente** — registra los ingredientes que tienes en casa. La app te dice qué recetas puedes preparar ya mismo y qué te falta comprar, ordenadas por porcentaje de coincidencia.
-- **IA con búsqueda web** — el chatbot no solo conversa, también busca recetas en internet (vía Serper API) y las importa automáticamente. Pregúntale "¿qué hago con pollo y pimientos?" y te responderá con recetas reales de sitios como Directo al Paladar o Divina Cocina.
+- **IA con búsqueda web** — el chatbot no solo conversa, también busca recetas en internet (vía Serper API) y las importa automáticamente. Pregúntale "¿qué hago con pollo y pimientos?" y te responderá con recetas reales de sitios como Divina Cocina.
 - **Importación desde URL** — pega el enlace de cualquier receta que encuentres en la web. La app extrae nombre, ingredientes, pasos, tiempos y porciones usando los datos estructurados (JSON-LD / schema.org Recipe) de la página. Todo listo para guardar con un toque.
 - **Escalado por porciones** — ajusta cualquier receta al número de comensales. Los ingredientes se recalculan automáticamente (con unidades inteligentes: no escala "1 pizca de sal", pero sí "200 g de harina").
 

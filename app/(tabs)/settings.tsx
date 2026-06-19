@@ -221,7 +221,7 @@ export default function SettingsScreen() {
           </View>
           <Text style={styles.description}>
             Configura tu API key de Serper.dev para buscar recetas online desde el chat.
-            Se busca solo en: recetas.elperiodico.com, directoalpaladar.com y divinacocina.es.
+            Se busca solo en: recetas.elperiodico.com y divinacocina.es.
           </Text>
 
           <Text style={styles.label}>Serper API Key</Text>
