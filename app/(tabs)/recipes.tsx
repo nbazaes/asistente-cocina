@@ -240,7 +240,7 @@ export default function RecipesScreen() {
             })}
           </ScrollView>
 
-          <View style={styles.bottomBar}>
+          <View style={[styles.bottomBar, { paddingBottom: spacing.md + insets.bottom }]}>
             {ingredientSearching ? (
               <View style={[styles.searchBtn, { justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="small" color={colors.white} />

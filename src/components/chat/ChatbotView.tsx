@@ -446,7 +446,7 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         </View>
       )}
 
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { paddingBottom: insets.bottom || spacing.sm }]}>
         <TextInput
           style={styles.textInput}
           value={input}

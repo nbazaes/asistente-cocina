@@ -141,7 +141,7 @@ export function RecipePreviewModal({ visible, recipe, importUrl, onClose, onSave
           <View style={{ height: spacing.lg }} />
         </ScrollView>
 
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: spacing.md + insets.bottom }]}>
           <TouchableOpacity
             style={styles.bottomSaveBtn}
             onPress={() => onSave(recipe, importUrl)}

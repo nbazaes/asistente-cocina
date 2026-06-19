@@ -218,7 +218,7 @@ export default function RecipeDetailScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.chatFab}
+        style={[styles.chatFab, { bottom: 24 + insets.bottom }]}
         onPress={() => setChatModalVisible(true)}
         activeOpacity={0.8}
       >
