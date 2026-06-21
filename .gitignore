@@ -53,3 +53,22 @@ yarn-error.*
 
 # Tareas locales
 tareas.md
+
+# Hyperframe / video skills
+.agents/skills/embedded-captions/
+.agents/skills/faceless-explainer/
+.agents/skills/general-video/
+.agents/skills/graphic-overlays/
+.agents/skills/hyperframes-animation/
+.agents/skills/hyperframes-cli/
+.agents/skills/hyperframes-core/
+.agents/skills/hyperframes-creative/
+.agents/skills/hyperframes-media/
+.agents/skills/hyperframes-registry/
+.agents/skills/hyperframes/
+.agents/skills/motion-graphics/
+.agents/skills/pr-to-video/
+.agents/skills/product-launch-video/
+.agents/skills/remotion-to-hyperframes/
+.agents/skills/slideshow/
+.agents/skills/website-to-video/
