@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendMessage, type AIToolResult, type ChatMessage } from '../../services/AIChatbotService';
+import { webSearchService } from '../../services/WebSearchService';
 import { importFromUrl, type ImportedRecipeData } from '../../services/RecipeImportService';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { getProvider } from '../../services/AIProviderConfig';
@@ -43,6 +44,28 @@ function MarkdownText({ children, style }: { children: string; style: object }) 
       ))}
     </Text>
   );
+}
+
+const OFFER_PHRASE = '¿Quieres que te dé recetas ya probadas?';
+
+function parseOffer(content: string): { query: string; cleanContent: string } | null {
+  const marker = content.match(/\[OFERTA_BUSQUEDA_WEB:([^\]]*)\]/);
+  if (marker) {
+    const query = marker[1].trim();
+    const cleanContent = content.replace(marker[0], '').trim();
+    if (query) return { query, cleanContent };
+    return null;
+  }
+  if (content.includes(OFFER_PHRASE)) {
+    const firstLine =
+      content
+        .split('\n')
+        .map((l) => l.trim())
+        .find((l) => l.length > 0) ?? '';
+    const query = firstLine.replace(/^[*#\-\d.\s]+/, '').trim();
+    return { query, cleanContent: content };
+  }
+  return null;
 }
 
 function parseMarkdown(text: string): { text: string; bold: boolean; italic: boolean }[] {
@@ -142,6 +165,7 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalRecipe, setModalRecipe] = useState<ImportedRecipeData | null>(null);
   const [modalUrl, setModalUrl] = useState<string | undefined>(undefined);
+  const [dismissedOffers, setDismissedOffers] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const handleSend = useCallback(async () => {
@@ -187,7 +211,7 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         .filter((m) => m.role !== 'system')
         .map((m) => ({
           role: m.role as 'user' | 'assistant',
-          content: m.content,
+          content: parseOffer(m.content)?.cleanContent ?? m.content,
         })),
     );
     history.push({ role: 'user' as const, content: text });
@@ -267,6 +291,34 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
     }
   }, []);
 
+  const handleOfferYes = useCallback(async (msgId: string, query: string) => {
+    setDismissedOffers((prev) => new Set(prev).add(msgId));
+    setLoading(true);
+    try {
+      const results = await webSearchService.search(query);
+      const aiMsg: Message = {
+        id: Date.now().toString() + 'a',
+        role: 'assistant',
+        content: '¡Claro! Aquí tienes algunas recetas ya probadas:',
+        toolResults: [{ type: 'search_results', searchResults: results }],
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (e) {
+      const errMsg: Message = {
+        id: Date.now().toString() + 'e',
+        role: 'assistant',
+        content: `No se pudieron obtener recetas probadas: ${(e as Error).message}`,
+      };
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleOfferNo = useCallback((msgId: string) => {
+    setDismissedOffers((prev) => new Set(prev).add(msgId));
+  }, []);
+
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.role === 'system') {
       return renderToolResults(item.toolResults);
@@ -274,6 +326,9 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
 
     const isUser = item.role === 'user';
     const hasToolContent = item.role === 'assistant' && item.toolResults && item.toolResults.length > 0;
+    const offer = isUser ? null : parseOffer(item.content);
+    const displayContent = offer ? offer.cleanContent : item.content;
+    const showOfferButtons = !isUser && !!offer && !dismissedOffers.has(item.id);
 
     return (
       <View>
@@ -288,8 +343,26 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         ) : (
           <View style={styles.bubbleRow}>
             <View style={[styles.bubble, styles.bubbleAI]}>
-              <MarkdownText style={styles.bubbleText}>{item.content}</MarkdownText>
+              <MarkdownText style={styles.bubbleText}>{displayContent}</MarkdownText>
             </View>
+          </View>
+        )}
+        {showOfferButtons && offer && (
+          <View style={styles.offerRow}>
+            <TouchableOpacity
+              style={[styles.offerBtn, styles.offerBtnYes]}
+              onPress={() => handleOfferYes(item.id, offer.query)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.offerBtnYesText}>Sí</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.offerBtn, styles.offerBtnNo]}
+              onPress={() => handleOfferNo(item.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.offerBtnNoText}>No</Text>
+            </TouchableOpacity>
           </View>
         )}
         {hasToolContent && renderToolResults(item.toolResults!)}
@@ -588,6 +661,39 @@ const styles = StyleSheet.create({
   toolResultsContainer: {
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
+  },
+  offerRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  offerBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerBtnYes: {
+    backgroundColor: colors.primary,
+  },
+  offerBtnYesText: {
+    color: colors.white,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    fontFamily: fonts.body,
+  },
+  offerBtnNo: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  offerBtnNoText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    fontFamily: fonts.body,
   },
   toolCard: {
     backgroundColor: colors.surface,
