@@ -39,3 +39,20 @@ export const userPantry = sqliteTable('user_pantry', {
   id: text('id').primaryKey(),
   ingredientName: text('ingredient_name').notNull().unique(),
 });
+
+export const chatConversations = sqliteTable('chat_conversations', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const chatMessages = sqliteTable('chat_messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  content: text('content').notNull().default(''),
+  imageDataUri: text('image_data_uri'),
+  createdAt: text('created_at').notNull(),
+  position: integer('position').notNull().default(0),
+});

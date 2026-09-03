@@ -41,6 +41,23 @@ export interface UserPantryItem {
   ingredientName: string;
 }
 
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatHistoryMessage {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  imageDataUri: string | null;
+  createdAt: string;
+  position: number;
+}
+
 export interface RecipeWithDetails extends Recipe {
   ingredients: Ingredient[];
   steps: Step[];

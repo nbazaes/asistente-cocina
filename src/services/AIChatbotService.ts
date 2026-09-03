@@ -3,6 +3,7 @@ import { getProvider } from './AIProviderConfig';
 import type { AIProvider } from './AIProviderConfig';
 import { webSearchService } from './WebSearchService';
 import { importFromUrl, type ImportedRecipeData } from './RecipeImportService';
+import type { Difficulty, RecipeType } from '../data/models';
 import type { WebSearchResult } from './WebSearchService';
 
 const SYSTEM_PROMPT = `Eres un asistente de cocina experto. SOLO hablas de cocina, gastronomía y alimentación. Ayudas a los usuarios con:
@@ -13,9 +14,10 @@ const SYSTEM_PROMPT = `Eres un asistente de cocina experto. SOLO hablas de cocin
 - Resolver dudas sobre términos culinarios
 - Recomendar recetas basadas en ingredientes disponibles
 
-Tienes acceso a dos herramientas:
+Tienes acceso a tres herramientas:
 1. search_recipes: busca recetas en sitios web de cocina españoles (recetas.elperiodico.com, divinacocina.es). Úsala cuando el usuario pida recetas "ya probadas" o cuando quieras mostrarle opciones verificadas de la web.
 2. import_recipe: importa una receta desde una URL. Úsala cuando el usuario te envíe un enlace de receta, o cuando quieras importar una receta que hayas encontrado con search_recipes.
+3. import_recipe_from_image: extrae una receta de una imagen que el usuario haya adjuntado o pegado (una foto de un libro, una tarjeta manuscrita, una captura de pantalla, etc.). Úsala SIEMPRE que el usuario envíe una imagen con una receta: devuelve la receta estructurada completa (nombre, tiempos, porciones, dificultad, tipo, etiquetas, ingredientes con cantidades y unidades, y pasos en orden). Si no hay suficiente información en la imagen (por ejemplo, faltan cantidades o pasos), haz tu mejor estimación razonable y no dejes campos vacíos si puedes evitarlos.
 
 Reglas importantes:
 - SOLO respondes preguntas relacionadas con cocina, recetas, ingredientes, técnicas culinarias, gastronomía y alimentación. Si el usuario pregunta sobre cualquier otro tema (política, deportes, tecnología, programación, clima, etc.), responde educadamente que solo puedes ayudar con temas de cocina y sugiérele hacer una pregunta culinaria.
@@ -70,9 +72,69 @@ export function getSystemPrompt(): string {
   return SYSTEM_PROMPT;
 }
 
+function normalizeRecipeFromImage(args: Record<string, unknown>): ImportedRecipeData {
+  const difficulty: Difficulty =
+    args.difficulty === 'easy' || args.difficulty === 'medium' || args.difficulty === 'hard'
+      ? args.difficulty
+      : 'medium';
+  const type: RecipeType =
+    args.type === 'dish' || args.type === 'dessert' || args.type === 'drink' || args.type === 'bakery'
+      ? args.type
+      : 'dish';
+
+  const ingredients = Array.isArray(args.ingredients)
+    ? args.ingredients.map((raw, i) => {
+        const ing = (raw ?? {}) as Record<string, unknown>;
+        return {
+          name: String(ing.name ?? `Ingrediente ${i + 1}`),
+          quantity: typeof ing.quantity === 'number' ? ing.quantity : 0,
+          unit: String(ing.unit ?? 'unidad').toLowerCase() || 'unidad',
+          optional: Boolean(ing.optional),
+          group: typeof ing.group === 'string' ? ing.group : null,
+          scalable:
+            typeof ing.scalable === 'boolean'
+              ? ing.scalable
+              : !['unidad', 'unidades', 'al gusto', 'pizca'].includes(String(ing.unit ?? '').toLowerCase()),
+        };
+      })
+    : [];
+
+  const steps = Array.isArray(args.steps)
+    ? args.steps.map((raw, i) => {
+        const step = (raw ?? {}) as Record<string, unknown>;
+        const dur = typeof step.durationMinutes === 'number' ? step.durationMinutes : null;
+        return {
+          order: typeof step.order === 'number' ? step.order : i,
+          description: String(step.description ?? ''),
+          durationMinutes: dur,
+          isTimeDependent: Boolean(step.isTimeDependent) || dur != null,
+        };
+      })
+    : [];
+
+  const tags = Array.isArray(args.tags)
+    ? args.tags.map(String).filter(Boolean)
+    : [];
+
+  return {
+    name: String(args.name ?? 'Receta importada'),
+    description: String(args.description ?? ''),
+    imageUri: null,
+    baseServings: typeof args.baseServings === 'number' ? Math.max(1, args.baseServings) : 2,
+    prepTime: typeof args.prepTime === 'number' ? Math.max(0, args.prepTime) : 0,
+    cookTime: typeof args.cookTime === 'number' ? Math.max(0, args.cookTime) : 0,
+    difficulty,
+    type,
+    tags,
+    ingredients,
+    steps,
+  };
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  imageDataUri?: string;
   toolCallId?: string;
   toolCalls?: ToolCall[];
 }
@@ -136,6 +198,56 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'import_recipe_from_image',
+      description:
+        'Extrae una receta completa a partir de una imagen que el usuario adjuntó o pegó. Devuelve la receta estructurada (ingredientes con cantidades, pasos, tiempos, etc.).',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nombre del plato' },
+          description: { type: 'string', description: 'Breve descripción de la receta' },
+          baseServings: { type: 'number', description: 'Número de porciones base' },
+          prepTime: { type: 'number', description: 'Tiempo de preparación en minutos' },
+          cookTime: { type: 'number', description: 'Tiempo de cocción en minutos' },
+          difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'], description: 'Dificultad: easy, medium o hard' },
+          type: { type: 'string', enum: ['dish', 'dessert', 'drink', 'bakery'], description: 'Tipo de receta: dish, dessert, drink o bakery' },
+          tags: { type: 'array', items: { type: 'string' }, description: 'Etiquetas o palabras clave de la receta' },
+          ingredients: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'Nombre del ingrediente' },
+                quantity: { type: 'number', description: 'Cantidad numérica (0 si no se indica o es "al gusto")' },
+                unit: { type: 'string', description: 'Unidad (g, kg, ml, l, cucharadas, unidades, pizca, al gusto...). Usa "unidad" si no se indica.' },
+                optional: { type: 'boolean', description: 'Si el ingrediente es opcional' },
+                group: { type: 'string', description: 'Grupo del ingrediente, o null si no aplica' },
+                scalable: { type: 'boolean', description: 'Si la cantidad escala con las porciones (false para unidades fijas, pizcas, "al gusto")' },
+              },
+              required: ['name', 'quantity', 'unit', 'optional', 'scalable'],
+            },
+          },
+          steps: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                order: { type: 'number', description: 'Orden del paso empezando en 0' },
+                description: { type: 'string', description: 'Descripción del paso' },
+                durationMinutes: { type: 'number', description: 'Duración del paso en minutos, o null' },
+                isTimeDependent: { type: 'boolean', description: 'Si el paso depende del tiempo de cocción/espera' },
+              },
+              required: ['order', 'description', 'durationMinutes', 'isTimeDependent'],
+            },
+          },
+        },
+        required: ['name', 'baseServings', 'prepTime', 'cookTime', 'difficulty', 'type', 'tags', 'ingredients', 'steps'],
+      },
+    },
+  },
 ];
 
 async function executeToolCall(
@@ -170,6 +282,13 @@ async function executeToolCall(
         };
       }
     }
+    case 'import_recipe_from_image': {
+      const recipeData = normalizeRecipeFromImage(args);
+      return {
+        type: 'recipe_import',
+        recipeData,
+      };
+    }
     default:
       return { type: 'search_results', error: `Herramienta desconocida: ${name}` };
   }
@@ -203,9 +322,15 @@ export async function sendMessage(messages: ChatMessage[]): Promise<AIResponse> 
           content: m.content,
         };
       }
+      const content = m.imageDataUri
+        ? [
+            { type: 'text', text: m.content },
+            { type: 'image_url', image_url: { url: m.imageDataUri } },
+          ]
+        : m.content;
       return {
         role: m.role === 'system' ? 'user' as const : m.role as 'user' | 'assistant',
-        content: m.content,
+        content,
       };
     });
 
@@ -218,7 +343,7 @@ export async function sendMessage(messages: ChatMessage[]): Promise<AIResponse> 
     model: currentModel,
     messages: apiMessages,
     temperature: 0.7,
-    max_tokens: 1000,
+    max_tokens: 4000,
     tools: TOOLS,
     tool_choice: 'auto',
   });
@@ -266,7 +391,7 @@ export async function sendMessage(messages: ChatMessage[]): Promise<AIResponse> 
       model: currentModel,
       messages: apiMessages,
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 4000,
       tools: TOOLS,
       tool_choice: 'auto',
     });

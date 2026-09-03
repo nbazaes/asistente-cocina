@@ -48,6 +48,9 @@ yarn-error.*
 # logs
 *.log
 
+# media / demos
+*.mp4
+
 # Tern/Eclipse
 .tern-port
 

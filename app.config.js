@@ -46,7 +46,7 @@ const config = {
     bundler: "metro",
     output: "single",
   },
-  plugins: ["expo-router", "expo-sqlite"],
+  plugins: ["expo-router", "expo-sqlite", "expo-image-picker"],
   extra: {
     router: {},
     eas: {

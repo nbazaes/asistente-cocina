@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
+  Modal,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendMessage, type AIToolResult, type ChatMessage } from '../../services/AIChatbotService';
@@ -18,12 +22,15 @@ import { importFromUrl, type ImportedRecipeData } from '../../services/RecipeImp
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { getProvider } from '../../services/AIProviderConfig';
 import { RecipePreviewModal } from './RecipePreviewModal';
+import { useRepositories } from '../../data/repositories/RepositoryProvider';
+import type { ConversationSummary } from '../../data/repositories/interfaces/IChatHistoryRepository';
 import { colors, spacing, fontSize, borderRadius, shadows, fonts } from '../../theme';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  imageDataUri?: string;
   toolResults?: AIToolResult[];
 }
 
@@ -47,6 +54,16 @@ function MarkdownText({ children, style }: { children: string; style: object }) 
 }
 
 const OFFER_PHRASE = '¿Quieres que te dé recetas ya probadas?';
+
+function formatRelativeDate(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
+  if (isNaN(date.getTime())) return '';
+  if (diffDays <= 0) return 'Hoy';
+  if (diffDays === 1) return 'Ayer';
+  return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
 
 function parseOffer(content: string): { query: string; cleanContent: string } | null {
   const marker = content.match(/\[OFERTA_BUSQUEDA_WEB:([^\]]*)\]/);
@@ -161,16 +178,165 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
 
   const [messages, setMessages] = useState<Message[]>([getInitialMessage()]);
   const [input, setInput] = useState('');
+  const [attachedImage, setAttachedImage] = useState<{ uri: string; dataUri: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalRecipe, setModalRecipe] = useState<ImportedRecipeData | null>(null);
   const [modalUrl, setModalUrl] = useState<string | undefined>(undefined);
   const [dismissedOffers, setDismissedOffers] = useState<Set<string>>(new Set());
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [historyList, setHistoryList] = useState<ConversationSummary[]>([]);
   const flatListRef = useRef<FlatList<Message>>(null);
+  const conversationIdRef = useRef<string | null>(null);
+  const { chatHistoryRepository } = useRepositories();
+
+  const handleAttachImage = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      base64: true,
+      quality: 0.6,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    if (!asset.base64) return;
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    const dataUri = `data:${mimeType};base64,${asset.base64}`;
+    setAttachedImage({ uri: asset.uri, dataUri });
+  }, []);
+
+  const handlePasteDataUri = useCallback((dataUrl: string) => {
+    setAttachedImage({ uri: dataUrl, dataUri: dataUrl });
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              handlePasteDataUri(reader.result);
+            }
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [handlePasteDataUri]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Clipboard.getImageAsync({ format: 'png' }).then((img) => {
+      if (img) {
+        handlePasteDataUri(img.data);
+      }
+    }).catch(() => {});
+  }, [handlePasteDataUri]);
+
+  const toMessages = useCallback(
+    (rows: { id: string; role: 'user' | 'assistant'; content: string; imageDataUri: string | null }[]): Message[] =>
+      rows.map((r) => ({
+        id: r.id,
+        role: r.role,
+        content: r.content,
+        imageDataUri: r.imageDataUri ?? undefined,
+      })),
+    [],
+  );
+
+  const restoreLatestConversation = useCallback(async () => {
+    if (recipeContext) return;
+    try {
+      const latest = await chatHistoryRepository.getLatestConversation();
+      if (!latest) return;
+      const rows = await chatHistoryRepository.getMessages(latest.id);
+      if (rows.length === 0) return;
+      conversationIdRef.current = latest.id;
+      setMessages(toMessages(rows));
+    } catch {
+      // la persistencia nunca debe romper el chat
+    }
+  }, [chatHistoryRepository, toMessages, recipeContext]);
+
+  useEffect(() => {
+    restoreLatestConversation();
+  }, [restoreLatestConversation]);
+
+  const persistTurn = async (userMsg: Message, aiMsg: Message) => {
+    try {
+      let convId = conversationIdRef.current;
+      if (!convId) {
+        const conv = await chatHistoryRepository.createConversation(
+          userMsg.content.slice(0, 60) || 'Conversación',
+        );
+        convId = conv.id;
+        conversationIdRef.current = convId;
+      }
+      await chatHistoryRepository.appendMessages(convId, [
+        { role: 'user', content: userMsg.content, imageDataUri: userMsg.imageDataUri ?? null },
+        { role: 'assistant', content: aiMsg.content },
+      ]);
+    } catch {
+      // noop
+    }
+  };
+
+  const openHistory = async () => {
+    try {
+      const list = await chatHistoryRepository.listConversations();
+      setHistoryList(list);
+    } catch {
+      setHistoryList([]);
+    }
+    setHistoryVisible(true);
+  };
+
+  const loadConversation = async (conv: ConversationSummary) => {
+    try {
+      const rows = await chatHistoryRepository.getMessages(conv.id);
+      conversationIdRef.current = conv.id;
+      setMessages(toMessages(rows));
+    } catch {
+      // noop
+    }
+    setHistoryVisible(false);
+  };
+
+  const deleteConversation = async (id: string) => {
+    try {
+      await chatHistoryRepository.deleteConversation(id);
+      if (conversationIdRef.current === id) {
+        conversationIdRef.current = null;
+        setMessages([getInitialMessage()]);
+      }
+      setHistoryList((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      // noop
+    }
+  };
+
+  const startNewConversation = () => {
+    conversationIdRef.current = null;
+    setMessages([getInitialMessage()]);
+    setInput('');
+    setAttachedImage(null);
+    setHistoryVisible(false);
+  };
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && !attachedImage) || loading) return;
+
+    const userText = text || (attachedImage ? 'Extrae la receta de esta imagen.' : '');
 
     if (!apiKey) {
       const errMsg: Message = {
@@ -181,20 +347,23 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
       };
       setMessages((prev) => [
         ...prev,
-        { id: Date.now().toString() + 'u', role: 'user', content: text },
+        { id: Date.now().toString() + 'u', role: 'user', content: userText, imageDataUri: attachedImage?.dataUri },
         errMsg,
       ]);
       setInput('');
+      setAttachedImage(null);
       return;
     }
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: text,
+      content: userText,
+      imageDataUri: attachedImage?.dataUri,
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
+    setAttachedImage(null);
     setLoading(true);
 
     const history: ChatMessage[] = [];
@@ -214,7 +383,11 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
           content: parseOffer(m.content)?.cleanContent ?? m.content,
         })),
     );
-    history.push({ role: 'user' as const, content: text });
+    history.push({
+      role: 'user' as const,
+      content: userText,
+      imageDataUri: attachedImage?.dataUri,
+    });
 
     try {
       const response = await sendMessage(history);
@@ -225,6 +398,7 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         toolResults: response.toolResults,
       };
       setMessages((prev) => [...prev, aiMsg]);
+      await persistTurn(userMsg, aiMsg);
     } catch (e) {
       const errMsg: Message = {
         id: Date.now().toString() + 'e',
@@ -232,10 +406,11 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         content: `Error: ${(e as Error).message}`,
       };
       setMessages((prev) => [...prev, errMsg]);
+      await persistTurn(userMsg, errMsg);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, apiKey, recipeContext]);
+  }, [input, loading, messages, apiKey, recipeContext, attachedImage, persistTurn]);
 
   const handleSaveRecipe = useCallback(
     (data: ImportedRecipeData, importUrl?: string) => {
@@ -335,6 +510,9 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         {isUser ? (
           <View style={[styles.bubbleRow, styles.bubbleRowUser]}>
             <View style={[styles.bubble, styles.bubbleUser]}>
+              {item.imageDataUri ? (
+                <Image source={{ uri: item.imageDataUri }} style={styles.messageImage} />
+              ) : null}
               <MarkdownText style={[styles.bubbleText, styles.bubbleTextUser]}>
                 {item.content}
               </MarkdownText>
@@ -482,7 +660,22 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
           <Text style={styles.title}>Chef IA</Text>
           <Text style={styles.headerAccent}>✦</Text>
         </View>
-        <View style={{ width: 70 }} />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={startNewConversation}
+            style={styles.headerActionBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerActionText}>✚</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={openHistory}
+            style={styles.headerActionBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerActionText}>🕘</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {!apiKey ? (
@@ -519,12 +712,36 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         </View>
       )}
 
+      {attachedImage ? (
+        <View style={styles.attachPreviewRow}>
+          <Image source={{ uri: attachedImage.uri }} style={styles.attachPreview} />
+          <Text style={styles.attachPreviewHint} numberOfLines={1}>
+            Imagen adjunta
+          </Text>
+          <TouchableOpacity
+            style={styles.attachRemoveBtn}
+            onPress={() => setAttachedImage(null)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.attachRemoveText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <View style={[styles.inputRow, { paddingBottom: insets.bottom || spacing.sm }]}>
+        <TouchableOpacity
+          style={styles.attachBtn}
+          onPress={handleAttachImage}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.attachBtnText}>📎</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.textInput}
           value={input}
           onChangeText={setInput}
-          placeholder="Pregunta algo o pega un enlace..."
+          placeholder="Pregunta algo, pega un enlace o una imagen..."
           placeholderTextColor={colors.textLight}
           multiline
           maxLength={500}
@@ -534,10 +751,10 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         <TouchableOpacity
           style={[
             styles.sendBtn,
-            (!input.trim() || loading) && styles.sendBtnDisabled,
+            ((!input.trim() && !attachedImage) || loading) && styles.sendBtnDisabled,
           ]}
           onPress={handleSend}
-          disabled={!input.trim() || loading}
+          disabled={(!input.trim() && !attachedImage) || loading}
           activeOpacity={0.7}
         >
           <Text style={styles.sendBtnText}>↑</Text>
@@ -550,6 +767,56 @@ export function ChatbotView({ onClose, recipeContext }: Props) {
         onClose={() => setModalVisible(false)}
         onSave={handleSaveRecipe}
       />
+
+      <Modal visible={historyVisible} transparent animationType="fade" onRequestClose={() => setHistoryVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setHistoryVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Historial</Text>
+            {historyList.length === 0 ? (
+              <Text style={styles.modalEmpty}>Todavía no hay conversaciones guardadas.</Text>
+            ) : (
+              <FlatList
+                data={historyList}
+                keyExtractor={(c) => c.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.historyItem}
+                    onPress={() => loadConversation(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.historyItemText}>
+                      <Text style={styles.historyItemTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.historyItemMeta}>
+                        {formatRelativeDate(item.updatedAt)} · {item.messageCount} mensajes
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.historyItemDelete}
+                      onPress={() => deleteConversation(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.historyItemDeleteText}>✕</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity
+              style={styles.modalNewBtn}
+              onPress={startNewConversation}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalNewBtnText}>Nueva conversación</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -591,6 +858,27 @@ const styles = StyleSheet.create({
   headerAccent: {
     fontSize: 14,
     color: colors.primary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    width: 70,
+    justifyContent: 'flex-end',
+  },
+  headerActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerActionText: {
+    fontSize: 16,
+    lineHeight: 18,
   },
   warning: {
     backgroundColor: colors.surfaceButter,
@@ -844,6 +1132,66 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSoft,
     backgroundColor: colors.surface,
   },
+  attachBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  attachBtnText: {
+    fontSize: 18,
+  },
+  attachPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+  },
+  attachPreview: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  attachPreviewHint: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+  },
+  attachRemoveBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachRemoveText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  messageImage: {
+    width: 200,
+    height: 150,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.borderSoft,
+  },
   textInput: {
     flex: 1,
     backgroundColor: colors.background,
@@ -871,5 +1219,88 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 20,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    width: '100%',
+    maxHeight: '70%',
+    padding: spacing.md,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fonts.heading,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  modalEmpty: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: spacing.lg,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.xs,
+  },
+  historyItemText: {
+    flex: 1,
+  },
+  historyItemTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fonts.body,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  historyItemMeta: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  historyItemDelete: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyItemDeleteText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  modalNewBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    ...shadows.sm,
+  },
+  modalNewBtnText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    fontFamily: fonts.body,
   },
 });

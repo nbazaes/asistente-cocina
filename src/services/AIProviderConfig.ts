@@ -32,11 +32,12 @@ export const AI_PROVIDERS: AIProvider[] = [
     id: 'openrouter',
     name: 'OpenRouter',
     baseURL: 'https://openrouter.ai/api/v1',
-    defaultModel: 'openai/gpt-4o-mini',
+    defaultModel: 'qwen/qwen3.7-flash',
     keyPrefixes: ['sk-or-'],
     websiteURL: 'https://openrouter.ai/keys',
     models: [
       { id: 'openrouter/auto', name: 'Auto (gratis)' },
+      { id: 'qwen/qwen3.7-flash', name: 'Qwen 3.7 Flash' },
       { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'openai/gpt-4o', name: 'GPT-4o' },
       { id: 'openai/o4-mini', name: 'o4 Mini' },
